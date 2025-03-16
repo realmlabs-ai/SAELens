@@ -124,6 +124,12 @@ class SAEConfig:
             "seqpos_slice": self.seqpos_slice,
         }
 
+def ident(x: torch.Tensor) -> torch.Tensor:
+    return x
+#  we need to scale the norm of the input and store the scaling factor
+
+def ident_first(x: torch.Tensor, y) -> torch.Tensor:
+    return x
 
 class SAE(HookedRootModule):
     """
@@ -177,11 +183,10 @@ class SAE(HookedRootModule):
 
         # handle presence / absence of scaling factor.
         if self.cfg.finetuning_scaling_factor:
-            self.apply_finetuning_scaling_factor = (
-                lambda x: x * self.finetuning_scaling_factor
-            )
+            self.apply_finetuning_scaling_factor = self.scale_by_finetuning
+            
         else:
-            self.apply_finetuning_scaling_factor = lambda x: x
+            self.apply_finetuning_scaling_factor = ident
 
         # set up hooks
         self.hook_sae_input = HookPoint()
@@ -205,44 +210,49 @@ class SAE(HookedRootModule):
         # handle run time activation normalization if needed:
         if self.cfg.normalize_activations == "constant_norm_rescale":
             #  we need to scale the norm of the input and store the scaling factor
-            def run_time_activation_norm_fn_in(x: torch.Tensor) -> torch.Tensor:
-                self.x_norm_coeff = (self.cfg.d_in**0.5) / x.norm(dim=-1, keepdim=True)
-                return x * self.x_norm_coeff
-
-            def run_time_activation_norm_fn_out(x: torch.Tensor) -> torch.Tensor:  #
-                x = x / self.x_norm_coeff
-                del self.x_norm_coeff  # prevents reusing
-                return x
-
-            self.run_time_activation_norm_fn_in = run_time_activation_norm_fn_in
-            self.run_time_activation_norm_fn_out = run_time_activation_norm_fn_out
+            self.run_time_activation_norm_fn_in = self.const_run_time_activation_norm_fn_in
+            self.run_time_activation_norm_fn_out = self.const_run_time_activation_norm_fn_out
 
         elif self.cfg.normalize_activations == "layer_norm":
             #  we need to scale the norm of the input and store the scaling factor
-            def run_time_activation_ln_in(
-                x: torch.Tensor, eps: float = 1e-5
-            ) -> torch.Tensor:
-                mu = x.mean(dim=-1, keepdim=True)
-                x = x - mu
-                std = x.std(dim=-1, keepdim=True)
-                x = x / (std + eps)
-                self.ln_mu = mu
-                self.ln_std = std
-                return x
-
-            def run_time_activation_ln_out(
-                x: torch.Tensor,
-                eps: float = 1e-5,  # noqa: ARG001
-            ) -> torch.Tensor:
-                return x * self.ln_std + self.ln_mu  # type: ignore
-
-            self.run_time_activation_norm_fn_in = run_time_activation_ln_in
-            self.run_time_activation_norm_fn_out = run_time_activation_ln_out
+            self.run_time_activation_norm_fn_in = self.layer_run_time_activation_ln_in
+            self.run_time_activation_norm_fn_out = self.layer_run_time_activation_ln_out
         else:
-            self.run_time_activation_norm_fn_in = lambda x: x
-            self.run_time_activation_norm_fn_out = lambda x: x
+            self.run_time_activation_norm_fn_in = ident
+            self.run_time_activation_norm_fn_out = ident
 
         self.setup()  # Required for `HookedRootModule`s
+
+    def layer_run_time_activation_ln_in(self,
+        x: torch.Tensor, eps: float = 1e-5
+    ) -> torch.Tensor:
+        mu = x.mean(dim=-1, keepdim=True)
+        x = x - mu
+        std = x.std(dim=-1, keepdim=True)
+        x = x / (std + eps)
+        self.ln_mu = mu
+        self.ln_std = std
+
+        return x
+
+    def layer_run_time_activation_ln_out(self,
+        x: torch.Tensor,
+        eps: float = 1e-5,  # noqa: ARG001
+    ) -> torch.Tensor:
+        return x * self.ln_std + self.ln_mu  # type: ignore
+
+    #  we need to scale the norm of the input and store the scaling factor
+    def const_run_time_activation_norm_fn_in(self, x: torch.Tensor) -> torch.Tensor:
+        self.x_norm_coeff = (self.cfg.d_in**0.5) / x.norm(dim=-1, keepdim=True)
+        return x * self.x_norm_coeff
+
+    def const_run_time_activation_norm_fn_out(self, x: torch.Tensor) -> torch.Tensor:  #
+        x = x / self.x_norm_coeff
+        del self.x_norm_coeff  # prevents reusing
+        return x
+
+    def scale_by_finetuning(self, x: torch.Tensor) -> torch.Tensor:
+        return x * self.finetuning_scaling_factor
 
     def initialize_weights_basic(self):
         # no config changes encoder bias init for now.
@@ -664,27 +674,34 @@ class SAE(HookedRootModule):
     def from_dict(cls, config_dict: dict[str, Any]) -> "SAE":
         return cls(SAEConfig.from_dict(config_dict))
 
+    def einops_rearrange_in(self, x: torch.Tensor) -> torch.Tensor:
+        return einops.rearrange(
+                x, "... n_heads d_head -> ... (n_heads d_head)"
+            )
+
+    def hook_z_reshape_fn_in(self, x: torch.Tensor) -> torch.Tensor:
+        self.d_head = x.shape[-1]  # type: ignore
+        self.reshape_fn_in = self.einops_rearrange_in
+        return einops.rearrange(x, "... n_heads d_head -> ... (n_heads d_head)")
+
+    def hook_z_reshape_fn_out(self, x, d_head):
+        return einops.rearrange(
+            x, "... (n_heads d_head) -> ... n_heads d_head", d_head=d_head
+        )
+
     def turn_on_forward_pass_hook_z_reshaping(self):
         if not self.cfg.hook_name.endswith("_z"):
             raise ValueError("This method should only be called for hook_z SAEs.")
 
-        def reshape_fn_in(x: torch.Tensor):
-            self.d_head = x.shape[-1]  # type: ignore
-            self.reshape_fn_in = lambda x: einops.rearrange(
-                x, "... n_heads d_head -> ... (n_heads d_head)"
-            )
-            return einops.rearrange(x, "... n_heads d_head -> ... (n_heads d_head)")
+        self.reshape_fn_in = self.hook_z_reshape_fn_in
 
-        self.reshape_fn_in = reshape_fn_in
+        self.reshape_fn_out = self.hook_z_reshape_fn_out
 
-        self.reshape_fn_out = lambda x, d_head: einops.rearrange(
-            x, "... (n_heads d_head) -> ... n_heads d_head", d_head=d_head
-        )
         self.hook_z_reshaping_mode = True
 
     def turn_off_forward_pass_hook_z_reshaping(self):
-        self.reshape_fn_in = lambda x: x
-        self.reshape_fn_out = lambda x, d_head: x  # noqa: ARG005
+        self.reshape_fn_in = ident
+        self.reshape_fn_out = ident_first  # noqa: ARG005
         self.d_head = None
         self.hook_z_reshaping_mode = False
 
