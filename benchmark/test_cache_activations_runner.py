@@ -37,7 +37,7 @@ def test_cache_activations_runner():
     if os.path.exists(activations_save_path):
         shutil.rmtree(activations_save_path)
 
-    torch.mps.empty_cache()
+    # torch.mps.empty_cache()
 
     cfg = CacheActivationsRunnerConfig(
         new_cached_activations_path=activations_save_path,

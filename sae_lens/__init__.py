@@ -44,6 +44,7 @@ from .analysis.hooked_sae_transformer import HookedSAETransformer
 from .cache_activations_runner import CacheActivationsRunner
 from .config import (
     CacheActivationsRunnerConfig,
+    DatasetSpec,
     LanguageModelSAERunnerConfig,
     LoggingConfig,
     PretokenizeRunnerConfig,
@@ -70,6 +71,7 @@ __all__ = [
     "LanguageModelSAETrainingRunner",
     "CacheActivationsRunnerConfig",
     "CacheActivationsRunner",
+    "DatasetSpec",
     "PretokenizeRunnerConfig",
     "PretokenizeRunner",
     "pretokenize_runner",

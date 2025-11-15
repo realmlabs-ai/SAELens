@@ -118,6 +118,24 @@ class LoggingConfig:
 
 
 @dataclass
+class DatasetSpec:
+    """
+    Per-dataset configuration for multi-dataset training.
+    Allows specifying datasets with different context lengths and batching.
+    """
+    dataset_path: str
+    context_size: int
+    # Optional overrides; if None, fall back to top-level config
+    store_batch_size_prompts: int | None = None
+    n_batches_in_buffer: int | None = None
+    seqpos_slice: tuple[int | None, ...] | None = None
+    prepend_bos: bool | None = None
+    streaming: bool | None = None
+    is_dataset_tokenized: bool | None = None
+    dataset_trust_remote_code: bool | None = None
+
+
+@dataclass
 class LanguageModelSAERunnerConfig(Generic[T_TRAINING_SAE_CONFIG]):
     """
     Configuration for training a sparse autoencoder on a language model.
@@ -272,6 +290,9 @@ class LanguageModelSAERunnerConfig(Generic[T_TRAINING_SAE_CONFIG]):
     sae_lens_version: str = field(default_factory=lambda: __version__)
     sae_lens_training_version: str = field(default_factory=lambda: __version__)
     exclude_special_tokens: bool | list[int] = False
+    # Optional: multiple datasets support. If provided, overrides single-dataset fields.
+    datasets: list[DatasetSpec] | None = None
+    dataset_schedule: Literal["round_robin"] = "round_robin"
 
     def __post_init__(self):
         if self.hook_eval != "NOT_IN_USE":
@@ -282,13 +303,19 @@ class LanguageModelSAERunnerConfig(Generic[T_TRAINING_SAE_CONFIG]):
                 stacklevel=2,
             )
 
-        if self.use_cached_activations and self.cached_activations_path is None:
+        # When using multi-dataset mode, skip single-dataset cached path inference
+        if (
+            self.datasets is None
+            and self.use_cached_activations
+            and self.cached_activations_path is None
+        ):
             self.cached_activations_path = _default_cached_activations_path(
                 self.dataset_path,
                 self.model_name,
                 self.hook_name,
                 self.hook_head_index,
             )
+        # For backwards-compat logging; with multi-dataset, these single-dataset values are not representative
         self.tokens_per_buffer = (
             self.train_batch_size_tokens * self.context_size * self.n_batches_in_buffer
         )
@@ -307,6 +334,24 @@ class LanguageModelSAERunnerConfig(Generic[T_TRAINING_SAE_CONFIG]):
 
         if self.lr_end is None:
             self.lr_end = self.lr / 10
+
+        # Validate multi-dataset settings
+        if self.datasets is not None and len(self.datasets) > 0:
+            if self.dataset_path not in ("", None):
+                warnings.warn(
+                    "Both 'datasets' (multi) and 'dataset_path' (single) were provided. "
+                    "Multi-dataset mode will be used and the single 'dataset_path' will be ignored.",
+                    RuntimeWarning,
+                )
+            for i, ds in enumerate(self.datasets):
+                if ds.context_size < 0:
+                    raise ValueError(
+                        f"datasets[{i}].context_size must be non-negative; got {ds.context_size}"
+                    )
+                if ds.seqpos_slice is not None:
+                    _validate_seqpos(
+                        seqpos=ds.seqpos_slice, context_size=ds.context_size
+                    )
 
         unique_id = self.logger.wandb_id
         if unique_id is None:

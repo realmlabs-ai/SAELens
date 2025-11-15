@@ -1,6 +1,6 @@
 import torch
 
-from sae_lens.config import LanguageModelSAERunnerConfig, LoggingConfig
+from sae_lens.config import LanguageModelSAERunnerConfig, LoggingConfig, DatasetSpec
 from sae_lens.llm_sae_training_runner import LanguageModelSAETrainingRunner
 from sae_lens.saes.gated_sae import GatedTrainingSAEConfig
 from sae_lens.saes.standard_sae import StandardTrainingSAEConfig
@@ -20,8 +20,8 @@ def test_language_model_sae_runner():
         device = "cpu"
 
     # total_training_steps = 20_000
-    total_training_steps = 500
-    batch_size = 4096
+    total_training_steps = 100
+    batch_size = 32
     total_training_tokens = total_training_steps * batch_size
     print(f"Total Training Tokens: {total_training_tokens}")
 
@@ -46,9 +46,18 @@ def test_language_model_sae_runner():
         model_name="gelu-1l",
         ## MLP Layer 0 ##
         hook_name="blocks.0.hook_mlp_out",
-        dataset_path="NeelNanda/c4-tokenized-2b",
-        context_size=256,
-        is_dataset_tokenized=True,
+        datasets=[
+            DatasetSpec(
+                dataset_path="/home/ubuntu/vishnu-dev/c4-tokenized-2b",
+                context_size=256,
+            ),
+            DatasetSpec(
+                dataset_path="NeelNanda/c4-tokenized-2b",
+                context_size=128,
+            ),
+        ],
+        dataset_schedule="round_robin",
+        is_dataset_tokenized=True,  # default for both unless overridden per dataset
         prepend_bos=True,  # I used to train GPT2 SAEs with a prepended-bos but no longer think we should do this.
         # How big do we want our SAE to be?
         # Dataset / Activation Store
@@ -80,8 +89,7 @@ def test_language_model_sae_runner():
         compile_sae=False,
         # WANDB
         logger=LoggingConfig(
-            wandb_project="benchmark",
-            wandb_log_frequency=100,
+            log_to_wandb=False,
         ),
         # Misc
         device=device,

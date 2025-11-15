@@ -99,6 +99,13 @@ class ActivationsStore:
         if isinstance(cfg, CacheActivationsRunnerConfig):
             return cls.from_cache_activations(model, cfg)
 
+        # Multi-dataset mode: build a MultiActivationsStore wrapper instead
+        if getattr(cfg, "datasets", None):
+            return MultiActivationsStore.from_runner_config(  # type: ignore[return-value]
+                model=model,
+                cfg=cfg,  # type: ignore[arg-type]
+            )
+
         cached_activations_path = cfg.cached_activations_path
         # set cached_activations_path to None if we're not using cached activations
         if (
@@ -772,6 +779,21 @@ class ActivationsStore:
                     pbar.update(self.n_dataset_processed - start)
                 pbar.close()
 
+def _is_huggingface_hub_path(path: str) -> bool:
+    """
+    Check if path looks like a HuggingFace Hub repository identifier.
+    Based on common patterns used in HF libraries.
+    """
+    # Hub paths typically: username/repo-name (no filesystem separators at start)
+    if path.startswith('/') or path.startswith('\\'):
+        return False  # Absolute path
+    if ':' in path and not path.startswith('http'):
+        return False  # Windows path like C:\ or URL without http
+    if path.startswith('.') or path.startswith('..'):
+        return False  # Relative path
+    if any(path.endswith(ext) for ext in ['.json', '.parquet', '.csv', '.txt']):
+        return False  # File with extension
+    return True  # Likely a Hub repository ID
 
 def validate_pretokenized_dataset_tokenizer(
     dataset_path: str, model_tokenizer: PreTrainedTokenizerBase
@@ -779,6 +801,11 @@ def validate_pretokenized_dataset_tokenizer(
     """
     Helper to validate that the tokenizer used to pretokenize the dataset matches the model tokenizer.
     """
+
+    # If the dataset path appears to be a local path, don't try to validate the tokenizer.
+    if not _is_huggingface_hub_path(dataset_path):
+        return
+
     try:
         tokenization_cfg_path = hf_hub_download(
             dataset_path, "sae_lens.json", repo_type="dataset"
@@ -829,3 +856,238 @@ def permute_together(tensors: Sequence[torch.Tensor]) -> tuple[torch.Tensor, ...
     """Permute tensors together."""
     permutation = torch.randperm(tensors[0].shape[0])
     return tuple(t[permutation] for t in tensors)
+
+
+class MultiActivationsStore:
+    """
+    A wrapper that holds multiple ActivationsStore instances (one per dataset)
+    and provides the same iterator interface by interleaving child stores in
+    round-robin fashion and feeding into the standard mixing_buffer for cross-dataset mixing.
+    """
+
+    def __init__(
+        self,
+        children: list[ActivationsStore],
+        train_batch_size_tokens: int,
+        n_batches_in_buffer: int,
+        exclude_special_tokens: torch.Tensor | None = None,
+    ):
+        if len(children) == 0:
+            raise ValueError("MultiActivationsStore requires at least one child store.")
+        # Validate d_in and hook_name match across children
+        base_d_in = children[0].d_in
+        base_hook = children[0].hook_name
+        for i, c in enumerate(children[1:], start=1):
+            if c.d_in != base_d_in:
+                raise ValueError(
+                    f"Child store {i} has d_in={c.d_in}, which doesn't match {base_d_in}"
+                )
+            if c.hook_name != base_hook:
+                raise ValueError(
+                    f"Child store {i} has hook_name='{c.hook_name}', which doesn't match '{base_hook}'"
+                )
+        self.children = children
+        self._child_idx = 0
+        self.d_in = base_d_in
+        self.hook_name = base_hook
+        self.train_batch_size_tokens = train_batch_size_tokens
+        self.n_batches_in_buffer = n_batches_in_buffer
+        # Use first child's store_batch_size_prompts for compatibility with evals
+        # Since this can differ per dataset, we use the first child's value as a default
+        self.store_batch_size_prompts = children[0].store_batch_size_prompts
+        # Use minimum context_size across children for compatibility with evals
+        # This ensures consistent evaluation behavior when datasets have different context sizes
+        self.context_size = min(child.context_size for child in children)
+        self.exclude_special_tokens = exclude_special_tokens
+        self._dataloader: Iterator[torch.Tensor] | None = None
+        self._eval_child_idx = 0  # Separate index for eval round-robin
+
+    def get_batch_tokens(
+        self, batch_size: int | None = None, raise_at_epoch_end: bool = False
+    ) -> torch.Tensor:
+        """
+        Collects a batch of token sequences from one child dataset (round-robin).
+        
+        Each call returns a batch from the next dataset in round-robin order, allowing
+        evaluation to run on each dataset separately.
+        
+        Note: All batches are truncated to the minimum context_size across all children
+        to ensure consistent shapes for evaluation metrics.
+        
+        Args:
+            batch_size: Number of sequences to collect. If None, uses store_batch_size_prompts from the selected child.
+            raise_at_epoch_end: If True, raises StopIteration when a dataset epoch ends.
+        
+        Returns:
+            Stacked tensor of shape (batch_size, min_context_size) from one child dataset.
+        """
+        # Find minimum context size across all children for consistent batching
+        min_context_size = min(child.training_context_size for child in self.children)
+        
+        # Select child in round-robin fashion
+        child = self.children[self._eval_child_idx]
+        self._eval_child_idx = (self._eval_child_idx + 1) % len(self.children)
+        
+        # Get batch from child
+        batch = child.get_batch_tokens(batch_size, raise_at_epoch_end)
+        
+        # Truncate to minimum context size if needed
+        if batch.shape[1] > min_context_size:
+            batch = batch[:, :min_context_size]
+        
+        return batch
+
+    def reset_input_dataset(self):
+        """
+        Resets the input dataset iterators for all child stores to the beginning.
+        """
+        for child in self.children:
+            child.reset_input_dataset()  # type: ignore[attr-defined]
+
+    @classmethod
+    def from_runner_config(
+        cls,
+        model: HookedRootModule,
+        cfg: LanguageModelSAERunnerConfig[T_TRAINING_SAE_CONFIG],
+    ) -> "MultiActivationsStore":
+        assert cfg.datasets is not None and len(cfg.datasets) > 0
+        
+        # Process exclude_special_tokens globally once
+        device = torch.device(cfg.act_store_device)
+        exclude_special_tokens = cfg.exclude_special_tokens
+        if exclude_special_tokens is False:
+            exclude_special_tokens = None
+        if exclude_special_tokens is True:
+            exclude_special_tokens = get_special_token_ids(model.tokenizer)  # type: ignore
+        if exclude_special_tokens is not None:
+            exclude_special_tokens = torch.tensor(
+                exclude_special_tokens, dtype=torch.long, device=device
+            )
+        
+        children: list[ActivationsStore] = []
+        for ds in cfg.datasets:
+            # Per-dataset overrides
+            child_store_batch_size_prompts = (
+                ds.store_batch_size_prompts
+                if ds.store_batch_size_prompts is not None
+                else cfg.store_batch_size_prompts
+            )
+            child_n_batches_in_buffer = (
+                ds.n_batches_in_buffer
+                if ds.n_batches_in_buffer is not None
+                else cfg.n_batches_in_buffer
+            )
+            child_seqpos = ds.seqpos_slice if ds.seqpos_slice is not None else cfg.seqpos_slice
+            child_prepend_bos = ds.prepend_bos if ds.prepend_bos is not None else cfg.prepend_bos
+            child_streaming = ds.streaming if ds.streaming is not None else cfg.streaming
+            child_is_tokenized = (
+                ds.is_dataset_tokenized
+                if ds.is_dataset_tokenized is not None
+                else cfg.is_dataset_tokenized
+            )
+            child_trust_remote = (
+                ds.dataset_trust_remote_code
+                if ds.dataset_trust_remote_code is not None
+                else cfg.dataset_trust_remote_code
+            )
+
+            child = ActivationsStore(
+                model=model,
+                dataset=ds.dataset_path,
+                streaming=child_streaming,
+                hook_name=cfg.hook_name,
+                hook_head_index=cfg.hook_head_index,
+                context_size=ds.context_size,
+                d_in=cfg.sae.d_in,
+                n_batches_in_buffer=child_n_batches_in_buffer,
+                total_training_tokens=cfg.training_tokens,
+                store_batch_size_prompts=child_store_batch_size_prompts,
+                train_batch_size_tokens=cfg.train_batch_size_tokens,
+                prepend_bos=child_prepend_bos,
+                normalize_activations=cfg.sae.normalize_activations,
+                device=device,
+                dtype=cfg.dtype,
+                cached_activations_path=None,
+                model_kwargs=cfg.model_kwargs,
+                autocast_lm=cfg.autocast_lm,
+                dataset_trust_remote_code=child_trust_remote,
+                seqpos_slice=child_seqpos,
+                exclude_special_tokens=exclude_special_tokens,
+                disable_concat_sequences=cfg.disable_concat_sequences,
+                sequence_separator_token=cfg.sequence_separator_token,
+            )
+            # Force handling according to per-dataset tokenized flag if provided
+            if child_is_tokenized is not None:
+                child.is_dataset_tokenized = child_is_tokenized  # type: ignore[attr-defined]
+            children.append(child)
+
+        return cls(
+            children=children,
+            train_batch_size_tokens=cfg.train_batch_size_tokens,
+            n_batches_in_buffer=cfg.n_batches_in_buffer,
+            exclude_special_tokens=exclude_special_tokens,
+        )
+
+    def _interleaved_filtered_buffers(self) -> Generator[torch.Tensor, None, None]:
+        """
+        Yield filtered buffers from children in strict round-robin order. If one child
+        hits StopIteration for the current epoch, reset that child and continue.
+        """
+        while True:
+            yielded_any = False
+            for _ in range(len(self.children)):
+                idx = self._child_idx
+                self._child_idx = (self._child_idx + 1) % len(self.children)
+                child = self.children[idx]
+                try:
+                    yield child.get_filtered_buffer(child.half_buffer_size, raise_on_epoch_end=True)  # type: ignore[attr-defined]
+                    yielded_any = True
+                except StopIteration:
+                    # Dataset exhausted, try to reset and get data
+                    warnings.warn(
+                        f"Child dataset {idx} exhausted, beginning new epoch."
+                    )
+                    try:
+                        yield child.get_filtered_buffer(child.half_buffer_size, raise_on_epoch_end=False)  # type: ignore[attr-defined]
+                        yielded_any = True
+                    except StopIteration:
+                        # Dataset is truly empty or too small
+                        continue
+            
+            if not yielded_any:
+                raise StopIteration("All datasets exhausted and could not produce buffers.")
+
+    def get_data_loader(self) -> Iterator[torch.Tensor]:
+        buffer_size = max(child.n_batches_in_buffer * child.training_context_size for child in self.children)
+        
+        return mixing_buffer(
+            buffer_size=buffer_size,
+            batch_size=self.train_batch_size_tokens,
+            activations_loader=self._interleaved_filtered_buffers(),
+        )
+
+    def __iter__(self) -> Iterator[torch.Tensor]:
+        return self
+
+    def __next__(self) -> torch.Tensor:
+        if self._dataloader is None:
+            self._dataloader = self.get_data_loader()
+        return next(self._dataloader)
+
+    def save_to_checkpoint(self, checkpoint_path: str | Path):
+        """
+        Save child stores' states to checkpoint_path with indexed filenames.
+        """
+        for i, child in enumerate(self.children):
+            fname = Path(checkpoint_path) / f"{i}_{ACTIVATIONS_STORE_STATE_FILENAME}"
+            child.save(str(fname))
+
+    def load_from_checkpoint(self, checkpoint_path: str | Path):
+        """
+        Load child stores' states from checkpoint_path with indexed filenames.
+        Missing files are ignored.
+        """
+        for i, child in enumerate(self.children):
+            fname = Path(checkpoint_path) / f"{i}_{ACTIVATIONS_STORE_STATE_FILENAME}"
+            if Path(fname).exists():
+                child.load(str(fname))
