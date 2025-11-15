@@ -5,13 +5,11 @@ from textwrap import dedent
 
 import pandas as pd
 import yaml
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from sae_lens import SAEConfig
-from sae_lens.toolkit.pretrained_sae_loaders import (
-    SAEConfigLoadOptions,
-    get_sae_config,
-    handle_config_defaulting,
+from sae_lens.loading.pretrained_sae_loaders import (
+    load_sae_config_from_huggingface,
 )
 
 INCLUDED_CFG = [
@@ -19,10 +17,7 @@ INCLUDED_CFG = [
     "architecture",
     "neuronpedia",
     "hook_name",
-    "hook_layer",
     "d_sae",
-    "context_size",
-    "dataset_path",
     "normalize_activations",
 ]
 
@@ -61,16 +56,17 @@ def generate_sae_table():
         for info in tqdm(model_info["saes"]):
             # can remove this by explicitly overriding config in yaml. Do this later.
             sae_id = info["id"]
-            cfg = get_sae_config(
+            raw_cfg = load_sae_config_from_huggingface(
                 release,
                 sae_id=sae_id,
-                options=SAEConfigLoadOptions(),
             )
-            cfg = handle_config_defaulting(cfg)
-            cfg = SAEConfig.from_dict(cfg).to_dict()
+            cfg = SAEConfig.from_dict(raw_cfg).to_dict()
 
             if "neuronpedia" not in info:
                 info["neuronpedia"] = None
+
+            if "metadata" in cfg:
+                info.update(cfg["metadata"])
 
             info.update(cfg)
 
@@ -85,6 +81,7 @@ def generate_sae_table():
         df["id"] = df["id"].apply(style_id)
         table = df.to_markdown(index=False)
         markdown_content += table + "\n\n"
+
     markdown_content += dedent(
         """
         <div id="codeModal" class="saetable-modal">

@@ -17,10 +17,7 @@ from sae_lens.evals import (
     run_evals,
     run_evaluations,
 )
-from sae_lens.toolkit.pretrained_sae_loaders import (
-    SAEConfigLoadOptions,
-    get_sae_config_from_hf,
-)
+from sae_lens.loading.pretrained_sae_loaders import load_sae_config_from_huggingface
 from tests.helpers import load_model_cached
 
 # from sae_lens.evals import run_evals
@@ -38,12 +35,11 @@ because they just didn't hold with such nonsense.
 """
 
 
-def test_get_sae_config():
+def test_load_sae_config_from_huggingface():
     repo_id = "jbloom/GPT2-Small-SAEs-Reformatted"
-    cfg = get_sae_config_from_hf(
-        repo_id=repo_id,
-        folder_name="blocks.0.hook_resid_pre",
-        options=SAEConfigLoadOptions(),
+    cfg = load_sae_config_from_huggingface(
+        release=repo_id,
+        sae_id="blocks.0.hook_resid_pre",
     )
     assert cfg is not None
 
@@ -64,7 +60,7 @@ def test_loading_pretrained_saes(
     else:
         device = "cpu"
 
-    sae, _, _ = SAE.from_pretrained(release, sae_name, device=device)
+    sae = SAE.from_pretrained(release, sae_name, device=device)
     assert isinstance(sae, SAE)
 
 
@@ -84,7 +80,7 @@ def test_loading_pretrained_saes_open_neuronpedia(
     else:
         device = "cpu"
 
-    sae, _, _ = SAE.from_pretrained(release, sae_name, device=device)
+    sae = SAE.from_pretrained(release, sae_name, device=device)
     assert isinstance(sae, SAE)
 
     open_neuronpedia_feature_dashboard(sae, 0)
@@ -106,18 +102,18 @@ def test_loading_pretrained_saes_do_forward_pass(
     else:
         device = "cpu"
 
-    sae, _, _ = SAE.from_pretrained(release, sae_name, device=device)
+    sae = SAE.from_pretrained(release, sae_name, device=device)
     assert isinstance(sae, SAE)
 
     # from transformer_lens import HookedTransformer
     # model = HookedTransformer.from_pretrained("gemma-2-9b")
-    # sae_in = model.run_with_cache("test test test")[1][sae.cfg.hook_name]
+    # sae_in = model.run_with_cache("test test test")[1][sae.cfg.metadata.hook_name]
 
-    if "hook_z" in sae.cfg.hook_name:
+    if "hook_z" in sae.cfg.metadata.hook_name:
         # check that reshaping works as intended
         from transformer_lens.loading_from_pretrained import get_pretrained_model_config
 
-        model_cfg = get_pretrained_model_config(sae.cfg.model_name)
+        model_cfg = get_pretrained_model_config(sae.cfg.metadata.model_name)
         sae_in = torch.randn(1, 4, model_cfg.n_heads, model_cfg.d_head).to(device)
         sae_out = sae(sae_in)
         assert sae_out.shape == sae_in.shape
@@ -147,15 +143,16 @@ def test_eval_all_loadable_saes(
     else:
         device = "cpu"
 
-    sae, _, _ = SAE.from_pretrained(release, sae_name, device=device)
+    sae = SAE.from_pretrained(release, sae_name, device=device)
     sae.fold_W_dec_norm()
 
-    model = load_model_cached(sae.cfg.model_name)
+    model = load_model_cached(sae.cfg.metadata.model_name)
     model.to(device)
 
     activation_store = ActivationsStore.from_sae(
         model=model,
         sae=sae,
+        dataset=sae.cfg.metadata.dataset_path,
         streaming=True,
         # fairly conservative parameters here so can use same for larger
         # models without running out of memory.
@@ -176,7 +173,7 @@ def test_eval_all_loadable_saes(
         activation_store=activation_store,
         model=model,
         eval_config=eval_config,
-        ignore_tokens={
+        exclude_special_tokens={
             model.tokenizer.pad_token_id,  # type: ignore
             model.tokenizer.eos_token_id,  # type: ignore
             model.tokenizer.bos_token_id,  # type: ignore

@@ -4,24 +4,30 @@ import json
 import math
 import re
 import subprocess
+import sys
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from functools import partial
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Iterable
 
 import einops
 import pandas as pd
 import torch
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from transformer_lens import HookedTransformer
 from transformer_lens.hook_points import HookedRootModule
 
-from sae_lens.sae import SAE
-from sae_lens.toolkit.pretrained_saes_directory import get_pretrained_saes_directory
+from sae_lens.loading.pretrained_saes_directory import get_pretrained_saes_directory
+from sae_lens.saes.sae import SAE, SAEConfig
+from sae_lens.training.activation_scaler import ActivationScaler
 from sae_lens.training.activations_store import ActivationsStore
+from sae_lens.util import (
+    extract_stop_at_layer_from_tlens_hook_name,
+    get_special_token_ids,
+)
 
 
 def get_library_version() -> str:
@@ -100,15 +106,22 @@ def get_eval_everything_config(
 
 @torch.no_grad()
 def run_evals(
-    sae: SAE,
+    sae: SAE[Any],
     activation_store: ActivationsStore,
     model: HookedRootModule,
+    activation_scaler: ActivationScaler,
     eval_config: EvalConfig = EvalConfig(),
     model_kwargs: Mapping[str, Any] = {},
-    ignore_tokens: set[int | None] = set(),
+    exclude_special_tokens: Iterable[int] | bool = True,
     verbose: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    hook_name = sae.cfg.hook_name
+    ignore_tokens = None
+    if exclude_special_tokens is True:
+        ignore_tokens = list(get_special_token_ids(model.tokenizer))  # type: ignore
+    elif exclude_special_tokens:
+        ignore_tokens = list(exclude_special_tokens)
+
+    hook_name = sae.cfg.metadata.hook_name
     actual_batch_size = (
         eval_config.batch_size_prompts or activation_store.store_batch_size_prompts
     )
@@ -140,6 +153,7 @@ def run_evals(
             sae,
             model,
             activation_store,
+            activation_scaler,
             compute_kl=eval_config.compute_kl,
             compute_ce_loss=eval_config.compute_ce_loss,
             n_batches=eval_config.n_eval_reconstruction_batches,
@@ -189,6 +203,7 @@ def run_evals(
             sae,
             model,
             activation_store,
+            activation_scaler,
             compute_l2_norms=eval_config.compute_l2_norms,
             compute_sparsity_metrics=eval_config.compute_sparsity_metrics,
             compute_variance_metrics=eval_config.compute_variance_metrics,
@@ -225,6 +240,9 @@ def run_evals(
                 {
                     "explained_variance": sparsity_variance_metrics[
                         "explained_variance"
+                    ],
+                    "explained_variance_legacy": sparsity_variance_metrics[
+                        "explained_variance_legacy"
                     ],
                     "mse": sparsity_variance_metrics["mse"],
                     "cossim": sparsity_variance_metrics["cossim"],
@@ -271,12 +289,11 @@ def run_evals(
     return all_metrics, feature_metrics
 
 
-def get_featurewise_weight_based_metrics(sae: SAE) -> dict[str, Any]:
+def get_featurewise_weight_based_metrics(sae: SAE[Any]) -> dict[str, Any]:
     unit_norm_encoders = (sae.W_enc / sae.W_enc.norm(dim=0, keepdim=True)).cpu()
     unit_norm_decoder = (sae.W_dec.T / sae.W_dec.T.norm(dim=0, keepdim=True)).cpu()
 
     encoder_norms = sae.W_enc.norm(dim=-2).cpu().tolist()
-    encoder_bias = sae.b_enc.cpu().tolist()
     encoder_decoder_cosine_sim = (
         torch.nn.functional.cosine_similarity(
             unit_norm_decoder.T,
@@ -286,22 +303,25 @@ def get_featurewise_weight_based_metrics(sae: SAE) -> dict[str, Any]:
         .tolist()
     )
 
-    return {
-        "encoder_bias": encoder_bias,
+    metrics = {
         "encoder_norm": encoder_norms,
         "encoder_decoder_cosine_sim": encoder_decoder_cosine_sim,
     }
+    if hasattr(sae, "b_enc") and sae.b_enc is not None:
+        metrics["encoder_bias"] = sae.b_enc.cpu().tolist()  # type: ignore
+    return metrics
 
 
 def get_downstream_reconstruction_metrics(
-    sae: SAE,
+    sae: SAE[Any],
     model: HookedRootModule,
     activation_store: ActivationsStore,
+    activation_scaler: ActivationScaler,
     compute_kl: bool,
     compute_ce_loss: bool,
     n_batches: int,
     eval_batch_size_prompts: int,
-    ignore_tokens: set[int | None] = set(),
+    ignore_tokens: list[int] | None = None,
     verbose: bool = False,
 ):
     metrics_dict = {}
@@ -322,13 +342,13 @@ def get_downstream_reconstruction_metrics(
         for metric_name, metric_value in get_recons_loss(
             sae,
             model,
+            activation_scaler,
             batch_tokens,
-            activation_store,
             compute_kl=compute_kl,
             compute_ce_loss=compute_ce_loss,
             ignore_tokens=ignore_tokens,
         ).items():
-            if len(ignore_tokens) > 0:
+            if ignore_tokens:
                 mask = torch.logical_not(
                     torch.any(
                         torch.stack(
@@ -362,9 +382,10 @@ def get_downstream_reconstruction_metrics(
 
 
 def get_sparsity_and_variance_metrics(
-    sae: SAE,
+    sae: SAE[Any],
     model: HookedRootModule,
     activation_store: ActivationsStore,
+    activation_scaler: ActivationScaler,
     n_batches: int,
     compute_l2_norms: bool,
     compute_sparsity_metrics: bool,
@@ -372,11 +393,11 @@ def get_sparsity_and_variance_metrics(
     compute_featurewise_density_statistics: bool,
     eval_batch_size_prompts: int,
     model_kwargs: Mapping[str, Any],
-    ignore_tokens: set[int | None] = set(),
+    ignore_tokens: list[int] | None = None,
     verbose: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    hook_name = sae.cfg.hook_name
-    hook_head_index = sae.cfg.hook_head_index
+    hook_name = sae.cfg.metadata.hook_name
+    hook_head_index = sae.cfg.metadata.hook_head_index
 
     metric_dict = {}
     feature_metric_dict = {}
@@ -389,8 +410,14 @@ def get_sparsity_and_variance_metrics(
     if compute_sparsity_metrics:
         metric_dict["l0"] = []
         metric_dict["l1"] = []
+
+    mean_sum_of_squares = []  # for explained variance
+    mean_act_per_dimension = []  # for explained variance
+    mean_sum_of_resid_squared = []  # for explained variance
     if compute_variance_metrics:
-        metric_dict["explained_variance"] = []
+        # explained_variance is left out of the dict here, since we don't want to naively
+        # average over the batch dimension. This is handled later in the function.
+        metric_dict["explained_variance_legacy"] = []
         metric_dict["mse"] = []
         metric_dict["cossim"] = []
     if compute_featurewise_density_statistics:
@@ -408,7 +435,7 @@ def get_sparsity_and_variance_metrics(
     for _ in batch_iter:
         batch_tokens = activation_store.get_batch_tokens(eval_batch_size_prompts)
 
-        if len(ignore_tokens) > 0:
+        if ignore_tokens:
             mask = torch.logical_not(
                 torch.any(
                     torch.stack(
@@ -426,7 +453,7 @@ def get_sparsity_and_variance_metrics(
             batch_tokens,
             prepend_bos=False,
             names_filter=[hook_name],
-            stop_at_layer=sae.cfg.hook_layer + 1,
+            stop_at_layer=extract_stop_at_layer_from_tlens_hook_name(hook_name),
             **model_kwargs,
         )
 
@@ -441,16 +468,18 @@ def get_sparsity_and_variance_metrics(
             original_act = cache[hook_name]
 
         # normalise if necessary (necessary in training only, otherwise we should fold the scaling in)
-        if activation_store.normalize_activations == "expected_average_only_in":
-            original_act = activation_store.apply_norm_scaling_factor(original_act)
+        original_act_scaled = activation_scaler.scale(original_act)
 
         # send the (maybe normalised) activations into the SAE
-        sae_feature_activations = sae.encode(original_act.to(sae.device))
-        sae_out = sae.decode(sae_feature_activations).to(original_act.device)
+        sae_feature_activations = sae.encode(original_act_scaled.to(sae.device))
+        sae_out_scaled = sae.decode(sae_feature_activations).to(
+            original_act_scaled.device
+        )
+        if sae_feature_activations.is_sparse:
+            sae_feature_activations = sae_feature_activations.to_dense()
         del cache
 
-        if activation_store.normalize_activations == "expected_average_only_in":
-            sae_out = activation_store.unscale(sae_out)
+        sae_out = activation_scaler.unscale(sae_out_scaled)
 
         flattened_sae_input = einops.rearrange(original_act, "b ctx d -> (b ctx) d")
         flattened_sae_feature_acts = einops.rearrange(
@@ -503,12 +532,28 @@ def get_sparsity_and_variance_metrics(
             resid_sum_of_squares = (
                 (flattened_sae_input - flattened_sae_out).pow(2).sum(dim=-1)
             )
-            total_sum_of_squares = (
-                (flattened_sae_input - flattened_sae_input.mean(dim=0)).pow(2).sum(-1)
-            )
 
             mse = resid_sum_of_squares / flattened_mask.sum()
-            explained_variance = 1 - resid_sum_of_squares / total_sum_of_squares
+            # Explained variance (old, incorrect, formula)
+            batched_variance_sum = (
+                (flattened_sae_input - flattened_sae_input.mean(dim=0))
+                .pow(2)
+                .sum(dim=-1)
+            )
+            explained_variance_legacy = 1 - resid_sum_of_squares / batched_variance_sum
+            metric_dict["explained_variance_legacy"].append(explained_variance_legacy)
+            # Individual sums for the new (correct) formula. We're taking the mean over the batch
+            # dimension here to save memory, but we could also pass the full tensors and take the
+            # mean later (like we do for other metrics).
+            mean_sum_of_squares.append(
+                (flattened_sae_input).pow(2).sum(dim=-1).mean(dim=0)  # scalar
+            )
+            mean_act_per_dimension.append(
+                (flattened_sae_input).pow(2).mean(dim=0)  # [d_model]
+            )
+            mean_sum_of_resid_squared.append(
+                resid_sum_of_squares.mean(dim=0)  # scalar
+            )
 
             x_normed = flattened_sae_input / torch.norm(
                 flattened_sae_input, dim=-1, keepdim=True
@@ -518,7 +563,6 @@ def get_sparsity_and_variance_metrics(
             )
             cossim = (x_normed * x_hat_normed).sum(dim=-1)
 
-            metric_dict["explained_variance"].append(explained_variance)
             metric_dict["mse"].append(mse)
             metric_dict["cossim"].append(cossim)
 
@@ -535,6 +579,14 @@ def get_sparsity_and_variance_metrics(
     for metric_name, metric_values in metric_dict.items():
         metrics[f"{metric_name}"] = torch.cat(metric_values).mean().item()
 
+    # calculate explained variance
+    if compute_variance_metrics:
+        mean_sum_of_squares = torch.stack(mean_sum_of_squares).mean(dim=0)
+        mean_act_per_dimension = torch.cat(mean_act_per_dimension).mean(dim=0)
+        total_variance = mean_sum_of_squares - mean_act_per_dimension**2
+        residual_variance = torch.stack(mean_sum_of_resid_squared).mean(dim=0)
+        metrics["explained_variance"] = (1 - residual_variance / total_variance).item()
+
     # Aggregate feature-wise metrics
     feature_metrics: dict[str, list[float]] = {}
     feature_metrics["feature_density"] = (total_feature_acts / total_tokens).tolist()
@@ -547,23 +599,27 @@ def get_sparsity_and_variance_metrics(
 
 @torch.no_grad()
 def get_recons_loss(
-    sae: SAE,
+    sae: SAE[SAEConfig],
     model: HookedRootModule,
+    activation_scaler: ActivationScaler,
     batch_tokens: torch.Tensor,
-    activation_store: ActivationsStore,
     compute_kl: bool,
     compute_ce_loss: bool,
-    ignore_tokens: set[int | None] = set(),
+    ignore_tokens: list[int] | None = None,
     model_kwargs: Mapping[str, Any] = {},
+    hook_name: str | None = None,
 ) -> dict[str, Any]:
-    hook_name = sae.cfg.hook_name
-    head_index = sae.cfg.hook_head_index
+    hook_name = hook_name or sae.cfg.metadata.hook_name
+    head_index = sae.cfg.metadata.hook_head_index
+
+    if hook_name is None:
+        raise ValueError("hook_name must be provided")
 
     original_logits, original_ce_loss = model(
         batch_tokens, return_type="both", loss_per_token=True, **model_kwargs
     )
 
-    if len(ignore_tokens) > 0:
+    if ignore_tokens:
         mask = torch.logical_not(
             torch.any(
                 torch.stack([batch_tokens == token for token in ignore_tokens], dim=0),
@@ -581,15 +637,13 @@ def get_recons_loss(
         activations = activations.to(sae.device)
 
         # Handle rescaling if SAE expects it
-        if activation_store.normalize_activations == "expected_average_only_in":
-            activations = activation_store.apply_norm_scaling_factor(activations)
+        activations = activation_scaler.scale(activations)
 
         # SAE class agnost forward forward pass.
         new_activations = sae.decode(sae.encode(activations)).to(activations.dtype)
 
         # Unscale if activations were scaled prior to going into the SAE
-        if activation_store.normalize_activations == "expected_average_only_in":
-            new_activations = activation_store.unscale(new_activations)
+        new_activations = activation_scaler.unscale(new_activations)
 
         new_activations = torch.where(mask[..., None], new_activations, activations)
 
@@ -600,8 +654,7 @@ def get_recons_loss(
         activations = activations.to(sae.device)
 
         # Handle rescaling if SAE expects it
-        if activation_store.normalize_activations == "expected_average_only_in":
-            activations = activation_store.apply_norm_scaling_factor(activations)
+        activations = activation_scaler.scale(activations)
 
         # SAE class agnost forward forward pass.
         new_activations = sae.decode(sae.encode(activations.flatten(-2, -1))).to(
@@ -613,8 +666,7 @@ def get_recons_loss(
         )  # reshape to match original shape
 
         # Unscale if activations were scaled prior to going into the SAE
-        if activation_store.normalize_activations == "expected_average_only_in":
-            new_activations = activation_store.unscale(new_activations)
+        new_activations = activation_scaler.unscale(new_activations)
 
         return new_activations.to(original_device)
 
@@ -623,8 +675,7 @@ def get_recons_loss(
         activations = activations.to(sae.device)
 
         # Handle rescaling if SAE expects it
-        if activation_store.normalize_activations == "expected_average_only_in":
-            activations = activation_store.apply_norm_scaling_factor(activations)
+        activations = activation_scaler.scale(activations)
 
         new_activations = sae.decode(sae.encode(activations[:, :, head_index])).to(
             activations.dtype
@@ -632,8 +683,7 @@ def get_recons_loss(
         activations[:, :, head_index] = new_activations
 
         # Unscale if activations were scaled prior to going into the SAE
-        if activation_store.normalize_activations == "expected_average_only_in":
-            activations = activation_store.unscale(activations)
+        activations = activation_scaler.unscale(activations)
 
         return activations.to(original_device)
 
@@ -679,17 +729,9 @@ def get_recons_loss(
         **model_kwargs,
     )
 
-    def kl(original_logits: torch.Tensor, new_logits: torch.Tensor):
-        original_probs = torch.nn.functional.softmax(original_logits, dim=-1)
-        log_original_probs = torch.log(original_probs)
-        new_probs = torch.nn.functional.softmax(new_logits, dim=-1)
-        log_new_probs = torch.log(new_probs)
-        kl_div = original_probs * (log_original_probs - log_new_probs)
-        return kl_div.sum(dim=-1)
-
     if compute_kl:
-        recons_kl_div = kl(original_logits, recons_logits)
-        zero_abl_kl_div = kl(original_logits, zero_abl_logits)
+        recons_kl_div = _kl(original_logits, recons_logits)
+        zero_abl_kl_div = _kl(original_logits, zero_abl_logits)
         metrics["kl_div_with_sae"] = recons_kl_div
         metrics["kl_div_with_ablation"] = zero_abl_kl_div
 
@@ -699,6 +741,18 @@ def get_recons_loss(
         metrics["ce_loss_with_ablation"] = zero_abl_ce_loss
 
     return metrics
+
+
+def _kl(original_logits: torch.Tensor, new_logits: torch.Tensor):
+    # Computes the log-probabilities of the new logits (approximation).
+    log_probs_new = torch.nn.functional.log_softmax(new_logits, dim=-1)
+    # Computes the probabilities of the original logits (true distribution).
+    probs_orig = torch.nn.functional.softmax(original_logits, dim=-1)
+    # Compute the KL divergence. torch.nn.functional.kl_div expects the first argument to be the log
+    # probabilities of the approximation (new), and the second argument to be the true distribution
+    # (original) as probabilities. This computes KL(original || new).
+    kl = torch.nn.functional.kl_div(log_probs_new, probs_orig, reduction="none")
+    return kl.sum(dim=-1)
 
 
 def all_loadable_saes() -> list[tuple[str, str, float, float]]:
@@ -732,17 +786,6 @@ def nested_dict() -> defaultdict[Any, Any]:
     return defaultdict(nested_dict)
 
 
-def dict_to_nested(flat_dict: dict[str, Any]) -> defaultdict[Any, Any]:
-    nested = nested_dict()
-    for key, value in flat_dict.items():
-        parts = key.split("/")
-        d = nested
-        for part in parts[:-1]:
-            d = d[part]
-        d[parts[-1]] = value
-    return nested
-
-
 def multiple_evals(
     sae_regex_pattern: str,
     sae_block_pattern: str,
@@ -750,10 +793,11 @@ def multiple_evals(
     n_eval_sparsity_variance_batches: int,
     eval_batch_size_prompts: int = 8,
     datasets: list[str] = ["Skylion007/openwebtext", "lighteval/MATH"],
+    dataset_trust_remote_code: bool = False,
     ctx_lens: list[int] = [128],
     output_dir: str = "eval_results",
     verbose: bool = False,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     filtered_saes = get_saes_from_regex(sae_regex_pattern, sae_block_pattern)
@@ -773,29 +817,34 @@ def multiple_evals(
 
     current_model = None
     current_model_str = None
-    print(filtered_saes)
     for sae_release_name, sae_id, _, _ in tqdm(filtered_saes):
         sae = SAE.from_pretrained(
             release=sae_release_name,  # see other options in sae_lens/pretrained_saes.yaml
             sae_id=sae_id,  # won't always be a hook point
             device=device,
-        )[0]
+        )
 
         # move SAE to device if not there already
         sae.to(device)
 
-        if current_model_str != sae.cfg.model_name:
+        if current_model_str != sae.cfg.metadata.model_name:
             del current_model  # potentially saves GPU memory
-            current_model_str = sae.cfg.model_name
+            current_model_str = sae.cfg.metadata.model_name
             current_model = HookedTransformer.from_pretrained_no_processing(
-                current_model_str, device=device, **sae.cfg.model_from_pretrained_kwargs
+                current_model_str,
+                device=device,
+                **sae.cfg.metadata.model_from_pretrained_kwargs,
             )
         assert current_model is not None
 
         for ctx_len in ctx_lens:
             for dataset in datasets:
                 activation_store = ActivationsStore.from_sae(
-                    current_model, sae, context_size=ctx_len, dataset=dataset
+                    current_model,
+                    sae,
+                    context_size=ctx_len,
+                    dataset=dataset,
+                    dataset_trust_remote_code=dataset_trust_remote_code,
                 )
                 activation_store.shuffle_input_dataset(seed=42)
 
@@ -813,13 +862,9 @@ def multiple_evals(
                 scalar_metrics, feature_metrics = run_evals(
                     sae=sae,
                     activation_store=activation_store,
+                    activation_scaler=ActivationScaler(),
                     model=current_model,
                     eval_config=eval_config,
-                    ignore_tokens={
-                        current_model.tokenizer.pad_token_id,  # type: ignore
-                        current_model.tokenizer.eos_token_id,  # type: ignore
-                        current_model.tokenizer.bos_token_id,  # type: ignore
-                    },
                     verbose=verbose,
                 )
                 eval_metrics["metrics"] = scalar_metrics
@@ -836,7 +881,7 @@ def multiple_evals(
     return eval_results
 
 
-def run_evaluations(args: argparse.Namespace) -> List[Dict[str, Any]]:
+def run_evaluations(args: argparse.Namespace) -> list[dict[str, Any]]:
     # Filter SAEs based on regex patterns
     filtered_saes = get_saes_from_regex(args.sae_regex_pattern, args.sae_block_pattern)
 
@@ -854,6 +899,7 @@ def run_evaluations(args: argparse.Namespace) -> List[Dict[str, Any]]:
         n_eval_sparsity_variance_batches=args.n_eval_sparsity_variance_batches,
         eval_batch_size_prompts=args.batch_size_prompts,
         datasets=args.datasets,
+        dataset_trust_remote_code=args.dataset_trust_remote_code,
         ctx_lens=args.ctx_lens,
         output_dir=args.output_dir,
         verbose=args.verbose,
@@ -871,8 +917,8 @@ def replace_nans_with_negative_one(obj: Any) -> Any:
 
 
 def process_results(
-    eval_results: List[Dict[str, Any]], output_dir: str
-) -> Dict[str, Union[List[Path], Path]]:
+    eval_results: list[dict[str, Any]], output_dir: str
+) -> dict[str, list[Path] | Path]:
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
@@ -905,7 +951,7 @@ def process_results(
     }
 
 
-if __name__ == "__main__":
+def process_args(args: list[str]) -> argparse.Namespace:
     arg_parser = argparse.ArgumentParser(description="Run evaluations on SAEs")
     arg_parser.add_argument(
         "sae_regex_pattern",
@@ -977,6 +1023,11 @@ if __name__ == "__main__":
         help="Datasets to evaluate on, such as 'Skylion007/openwebtext' or 'lighteval/MATH'.",
     )
     arg_parser.add_argument(
+        "--dataset_trust_remote_code",
+        action="store_true",
+        help="Allow execution of remote code when loading datasets for evaluation.",
+    )
+    arg_parser.add_argument(
         "--ctx_lens",
         nargs="+",
         type=int,
@@ -995,11 +1046,19 @@ if __name__ == "__main__":
         help="Enable verbose output with tqdm loaders.",
     )
 
-    args = arg_parser.parse_args()
-    eval_results = run_evaluations(args)
-    output_files = process_results(eval_results, args.output_dir)
+    return arg_parser.parse_args(args)
+
+
+def run_evals_cli(args: list[str]) -> None:
+    opts = process_args(args)
+    eval_results = run_evaluations(opts)
+    output_files = process_results(eval_results, opts.output_dir)
 
     print("Evaluation complete. Output files:")
     print(f"Individual JSONs: {len(output_files['individual_jsons'])}")  # type: ignore
     print(f"Combined JSON: {output_files['combined_json']}")
     print(f"CSV: {output_files['csv']}")
+
+
+if __name__ == "__main__":
+    run_evals_cli(sys.argv[1:])

@@ -1,9 +1,10 @@
 import io
 import json
 import sys
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator, Literal, cast
+from typing import Literal, cast
 
 import torch
 from datasets import Dataset, DatasetDict, load_dataset
@@ -35,6 +36,7 @@ class PretokenizedDatasetMetadata:
     begin_batch_token: int | Literal["bos", "eos", "sep"] | None
     begin_sequence_token: int | Literal["bos", "eos", "sep"] | None
     sequence_separator_token: int | Literal["bos", "eos", "sep"] | None
+    disable_concat_sequences: bool
 
 
 def metadata_from_config(cfg: PretokenizeRunnerConfig) -> PretokenizedDatasetMetadata:
@@ -52,6 +54,7 @@ def metadata_from_config(cfg: PretokenizeRunnerConfig) -> PretokenizedDatasetMet
         begin_batch_token=cfg.begin_batch_token,
         begin_sequence_token=cfg.begin_sequence_token,
         sequence_separator_token=cfg.sequence_separator_token,
+        disable_concat_sequences=cfg.disable_concat_sequences,
     )
 
 
@@ -99,6 +102,7 @@ def pretokenize_dataset(
                     sequence_separator_token_id=get_special_token_from_cfg(
                         cfg.sequence_separator_token, tokenizer
                     ),
+                    disable_concat_sequences=cfg.disable_concat_sequences,
                 )
             )
         }

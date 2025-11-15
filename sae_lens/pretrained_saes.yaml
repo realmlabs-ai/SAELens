@@ -1,3 +1,35 @@
+temporal-sae-gemma-2-2b:
+  conversion_func: temporal
+  model: gemma-2-2b
+  repo_id: canrager/temporalSAEs
+  config_overrides:
+    model_name: gemma-2-2b
+    hook_name: blocks.12.hook_resid_post
+    dataset_path: monology/pile-uncopyrighted
+  saes:
+  - id: blocks.12.hook_resid_post
+    l0: 192
+    norm_scaling_factor: 0.00666666667
+    path: gemma-2-2B/layer_12/temporal
+    neuronpedia: gemma-2-2b/12-temporal-res
+temporal-sae-llama-3.1-8b:
+  conversion_func: temporal
+  model: meta-llama/Llama-3.1-8B
+  repo_id: canrager/temporalSAEs
+  config_overrides:
+    model_name: meta-llama/Llama-3.1-8B
+    dataset_path: monology/pile-uncopyrighted
+  saes:
+  - id: blocks.15.hook_resid_post
+    l0: 256
+    norm_scaling_factor: 0.029
+    path: llama-3.1-8B/layer_15/temporal
+    neuronpedia: llama3.1-8b/15-temporal-res
+  - id: blocks.26.hook_resid_post
+    l0: 256
+    norm_scaling_factor: 0.029
+    path: llama-3.1-8B/layer_26/temporal
+    neuronpedia: llama3.1-8b/26-temporal-res
 deepseek-r1-distill-llama-8b-qresearch:
   conversion_func: deepseek_r1
   model: deepseek-ai/DeepSeek-R1-Distill-Llama-8B
@@ -8835,10 +8867,6 @@ gemma-scope-9b-pt-res-canonical:
     l0: 77
     neuronpedia: gemma-2-9b/31-gemmascope-res-1m
     path: layer_31/width_1m/average_l0_77
-  - id: layer_20/width_262k/canonical
-    l0: 64
-    neuronpedia: gemma-2-9b/20-gemmascope-res-262k
-    path: layer_20/width_262k/average_l0_64
   - id: layer_20/width_32k/canonical
     l0: 57
     neuronpedia: gemma-2-9b/20-gemmascope-res-32k
@@ -13588,3 +13616,1344 @@ sae_bench_pythia70m_sweep_topk_ctx128_0730:
   - id: blocks.4.hook_resid_post__trainer_8
     neuronpedia: pythia-70m-deduped/4-sae_bench-topk-res-4k__trainer_8_step_final
     path: pythia70m_sweep_topk_ctx128_0730/resid_post_layer_4/trainer_8
+gemma-2-2b-res-matryoshka-dc:
+  conversion_func: null
+  links:
+    model: https://huggingface.co/google/gemma-2-2b
+  model: gemma-2-2b
+  repo_id: chanind/gemma-2-2b-batch-topk-matryoshka-saes-w-32k-l0-40
+  saes:
+  - id: blocks.0.hook_resid_post
+    path: standard/blocks.0.hook_resid_post
+    l0: 40.0
+  - id: blocks.1.hook_resid_post
+    path: standard/blocks.1.hook_resid_post
+    l0: 40.0
+  - id: blocks.2.hook_resid_post
+    path: standard/blocks.2.hook_resid_post
+    l0: 40.0
+  - id: blocks.3.hook_resid_post
+    path: standard/blocks.3.hook_resid_post
+    l0: 40.0
+  - id: blocks.4.hook_resid_post
+    path: standard/blocks.4.hook_resid_post
+    l0: 40.0
+  - id: blocks.5.hook_resid_post
+    path: standard/blocks.5.hook_resid_post
+    l0: 40.0
+  - id: blocks.6.hook_resid_post
+    path: standard/blocks.6.hook_resid_post
+    l0: 40.0
+  - id: blocks.7.hook_resid_post
+    path: standard/blocks.7.hook_resid_post
+    l0: 40.0
+  - id: blocks.8.hook_resid_post
+    path: standard/blocks.8.hook_resid_post
+    l0: 40.0
+  - id: blocks.9.hook_resid_post
+    path: standard/blocks.9.hook_resid_post
+    l0: 40.0
+  - id: blocks.10.hook_resid_post
+    path: standard/blocks.10.hook_resid_post
+    l0: 40.0
+  - id: blocks.11.hook_resid_post
+    path: standard/blocks.11.hook_resid_post
+    l0: 40.0
+  - id: blocks.12.hook_resid_post
+    path: standard/blocks.12.hook_resid_post
+    l0: 40.0
+    neuronpedia: gemma-2-2b/12-res-matryoshka-dc
+  - id: blocks.13.hook_resid_post
+    path: standard/blocks.13.hook_resid_post
+    l0: 40.0
+    neuronpedia: gemma-2-2b/13-res-matryoshka-dc
+  - id: blocks.14.hook_resid_post
+    path: standard/blocks.14.hook_resid_post
+    l0: 40.0
+    neuronpedia: gemma-2-2b/14-res-matryoshka-dc
+  - id: blocks.15.hook_resid_post
+    path: standard/blocks.15.hook_resid_post
+    l0: 40.0
+    neuronpedia: gemma-2-2b/15-res-matryoshka-dc
+  - id: blocks.16.hook_resid_post
+    path: standard/blocks.16.hook_resid_post
+    l0: 40.0
+    neuronpedia: gemma-2-2b/16-res-matryoshka-dc
+  - id: blocks.17.hook_resid_post
+    path: standard/blocks.17.hook_resid_post
+    l0: 40.0
+    neuronpedia: gemma-2-2b/17-res-matryoshka-dc
+  - id: blocks.18.hook_resid_post
+    path: standard/blocks.18.hook_resid_post
+    l0: 40.0
+    neuronpedia: gemma-2-2b/18-res-matryoshka-dc
+  - id: blocks.19.hook_resid_post
+    path: standard/blocks.19.hook_resid_post
+    l0: 40.0
+    neuronpedia: gemma-2-2b/19-res-matryoshka-dc
+  - id: blocks.20.hook_resid_post
+    path: standard/blocks.20.hook_resid_post
+    l0: 40.0
+    neuronpedia: gemma-2-2b/20-res-matryoshka-dc
+  - id: blocks.21.hook_resid_post
+    path: standard/blocks.21.hook_resid_post
+    l0: 40.0
+    neuronpedia: gemma-2-2b/21-res-matryoshka-dc
+  - id: blocks.22.hook_resid_post
+    path: standard/blocks.22.hook_resid_post
+    l0: 40.0
+    neuronpedia: gemma-2-2b/22-res-matryoshka-dc
+  - id: blocks.23.hook_resid_post
+    path: standard/blocks.23.hook_resid_post
+    l0: 40.0
+    neuronpedia: gemma-2-2b/23-res-matryoshka-dc
+  - id: blocks.24.hook_resid_post
+    path: standard/blocks.24.hook_resid_post
+    l0: 40.0
+    neuronpedia: gemma-2-2b/24-res-matryoshka-dc
+gemma-2-2b-res-snap-matryoshka-dc:
+  conversion_func: null
+  links:
+    model: https://huggingface.co/google/gemma-2-2b
+  model: gemma-2-2b
+  repo_id: chanind/gemma-2-2b-batch-topk-matryoshka-saes-w-32k-l0-40
+  saes:
+  - id: blocks.0.hook_resid_post
+    path: snap/blocks.0.hook_resid_post
+    l0: 40.0
+  - id: blocks.1.hook_resid_post
+    path: snap/blocks.1.hook_resid_post
+    l0: 40.0
+  - id: blocks.2.hook_resid_post
+    path: snap/blocks.2.hook_resid_post
+    l0: 40.0
+  - id: blocks.3.hook_resid_post
+    path: snap/blocks.3.hook_resid_post
+    l0: 40.0
+  - id: blocks.4.hook_resid_post
+    path: snap/blocks.4.hook_resid_post
+    l0: 40.0
+  - id: blocks.5.hook_resid_post
+    path: snap/blocks.5.hook_resid_post
+    l0: 40.0
+  - id: blocks.6.hook_resid_post
+    path: snap/blocks.6.hook_resid_post
+    l0: 40.0
+  - id: blocks.7.hook_resid_post
+    path: snap/blocks.7.hook_resid_post
+    l0: 40.0
+  - id: blocks.8.hook_resid_post
+    path: snap/blocks.8.hook_resid_post
+    l0: 40.0
+  - id: blocks.9.hook_resid_post
+    path: snap/blocks.9.hook_resid_post
+    l0: 40.0
+  - id: blocks.10.hook_resid_post
+    path: snap/blocks.10.hook_resid_post
+    l0: 40.0
+  - id: blocks.11.hook_resid_post
+    path: snap/blocks.11.hook_resid_post
+    l0: 40.0
+  - id: blocks.12.hook_resid_post
+    path: snap/blocks.12.hook_resid_post
+    l0: 40.0
+  - id: blocks.13.hook_resid_post
+    path: snap/blocks.13.hook_resid_post
+    l0: 40.0
+  - id: blocks.14.hook_resid_post
+    path: snap/blocks.14.hook_resid_post
+    l0: 40.0
+  - id: blocks.15.hook_resid_post
+    path: snap/blocks.15.hook_resid_post
+    l0: 40.0
+  - id: blocks.16.hook_resid_post
+    path: snap/blocks.16.hook_resid_post
+    l0: 40.0
+  - id: blocks.17.hook_resid_post
+    path: snap/blocks.17.hook_resid_post
+    l0: 40.0
+  - id: blocks.18.hook_resid_post
+    path: snap/blocks.18.hook_resid_post
+    l0: 40.0
+  - id: blocks.19.hook_resid_post
+    path: snap/blocks.19.hook_resid_post
+    l0: 40.0
+  - id: blocks.20.hook_resid_post
+    path: snap/blocks.20.hook_resid_post
+    l0: 40.0
+  - id: blocks.21.hook_resid_post
+    path: snap/blocks.21.hook_resid_post
+    l0: 40.0
+  - id: blocks.22.hook_resid_post
+    path: snap/blocks.22.hook_resid_post
+    l0: 40.0
+  - id: blocks.23.hook_resid_post
+    path: snap/blocks.23.hook_resid_post
+    l0: 40.0
+  - id: blocks.24.hook_resid_post
+    path: snap/blocks.24.hook_resid_post
+    l0: 40.0
+gemma-2-9b-res-matryoshka-dc:
+  conversion_func: null
+  links:
+    model: https://huggingface.co/google/gemma-2-9b
+  model: gemma-2-9b
+  repo_id: chanind/gemma-2-9b-batch-topk-matryoshka-saes-w-32k-l0-60
+  saes:
+  - id: blocks.0.hook_resid_post
+    path: blocks.0.hook_resid_post
+    l0: 60.0
+  - id: blocks.1.hook_resid_post
+    path: blocks.1.hook_resid_post
+    l0: 60.0
+  - id: blocks.2.hook_resid_post
+    path: blocks.2.hook_resid_post
+    l0: 60.0
+  - id: blocks.3.hook_resid_post
+    path: blocks.3.hook_resid_post
+    l0: 60.0
+  - id: blocks.4.hook_resid_post
+    path: blocks.4.hook_resid_post
+    l0: 60.0
+  - id: blocks.5.hook_resid_post
+    path: blocks.5.hook_resid_post
+    l0: 60.0
+  - id: blocks.6.hook_resid_post
+    path: blocks.6.hook_resid_post
+    l0: 60.0
+  - id: blocks.7.hook_resid_post
+    path: blocks.7.hook_resid_post
+    l0: 60.0
+  - id: blocks.8.hook_resid_post
+    path: blocks.8.hook_resid_post
+    l0: 60.0
+  - id: blocks.9.hook_resid_post
+    path: blocks.9.hook_resid_post
+    l0: 60.0
+  - id: blocks.10.hook_resid_post
+    path: blocks.10.hook_resid_post
+    l0: 60.0
+  - id: blocks.11.hook_resid_post
+    path: blocks.11.hook_resid_post
+    l0: 60.0
+  - id: blocks.12.hook_resid_post
+    path: blocks.12.hook_resid_post
+    l0: 60.0
+  - id: blocks.13.hook_resid_post
+    path: blocks.13.hook_resid_post
+    l0: 60.0
+  - id: blocks.14.hook_resid_post
+    path: blocks.14.hook_resid_post
+    l0: 60.0
+  - id: blocks.15.hook_resid_post
+    path: blocks.15.hook_resid_post
+    l0: 60.0
+  - id: blocks.16.hook_resid_post
+    path: blocks.16.hook_resid_post
+    l0: 60.0
+  - id: blocks.17.hook_resid_post
+    path: blocks.17.hook_resid_post
+    l0: 60.0
+  - id: blocks.18.hook_resid_post
+    path: blocks.18.hook_resid_post
+    l0: 60.0
+  - id: blocks.19.hook_resid_post
+    path: blocks.19.hook_resid_post
+    l0: 60.0
+  - id: blocks.20.hook_resid_post
+    path: blocks.20.hook_resid_post
+    l0: 60.0
+    neuronpedia: gemma-2-9b/20-res-matryoshka-dc
+  - id: blocks.21.hook_resid_post
+    path: blocks.21.hook_resid_post
+    l0: 60.0
+  - id: blocks.22.hook_resid_post
+    path: blocks.22.hook_resid_post
+    l0: 60.0
+  - id: blocks.23.hook_resid_post
+    path: blocks.23.hook_resid_post
+    l0: 60.0
+  - id: blocks.24.hook_resid_post
+    path: blocks.24.hook_resid_post
+    l0: 60.0
+  - id: blocks.25.hook_resid_post
+    path: blocks.25.hook_resid_post
+    l0: 60.0
+  - id: blocks.26.hook_resid_post
+    path: blocks.26.hook_resid_post
+    l0: 60.0
+  - id: blocks.27.hook_resid_post
+    path: blocks.27.hook_resid_post
+    l0: 60.0
+  - id: blocks.28.hook_resid_post
+    path: blocks.28.hook_resid_post
+    l0: 60.0
+  - id: blocks.29.hook_resid_post
+    path: blocks.29.hook_resid_post
+    l0: 60.0
+  - id: blocks.30.hook_resid_post
+    path: blocks.30.hook_resid_post
+    l0: 60.0
+  - id: blocks.31.hook_resid_post
+    path: blocks.31.hook_resid_post
+    l0: 60.0
+  - id: blocks.32.hook_resid_post
+    path: blocks.32.hook_resid_post
+    l0: 60.0
+  - id: blocks.33.hook_resid_post
+    path: blocks.33.hook_resid_post
+    l0: 60.0
+  - id: blocks.34.hook_resid_post
+    path: blocks.34.hook_resid_post
+    l0: 60.0
+  - id: blocks.35.hook_resid_post
+    path: blocks.35.hook_resid_post
+    l0: 60.0
+  - id: blocks.36.hook_resid_post
+    path: blocks.36.hook_resid_post
+    l0: 60.0
+  - id: blocks.37.hook_resid_post
+    path: blocks.37.hook_resid_post
+    l0: 60.0
+  - id: blocks.38.hook_resid_post
+    path: blocks.38.hook_resid_post
+    l0: 60.0
+  - id: blocks.39.hook_resid_post
+    path: blocks.39.hook_resid_post
+    l0: 60.0
+  - id: blocks.40.hook_resid_post
+    path: blocks.40.hook_resid_post
+    l0: 60.0
+gemma-3-1b-res-matryoshka-dc:
+  conversion_func: null
+  links:
+    model: https://huggingface.co/google/gemma-3-1b-pt
+  model: gemma-3-1b
+  repo_id: chanind/gemma-3-1b-batch-topk-matryoshka-saes-w-32k-l0-40
+  saes:
+  - id: blocks.0.hook_resid_post
+    path: blocks.0.hook_resid_post
+    l0: 40.0
+  - id: blocks.1.hook_resid_post
+    path: blocks.1.hook_resid_post
+    l0: 40.0
+  - id: blocks.2.hook_resid_post
+    path: blocks.2.hook_resid_post
+    l0: 40.0
+  - id: blocks.3.hook_resid_post
+    path: blocks.3.hook_resid_post
+    l0: 40.0
+  - id: blocks.4.hook_resid_post
+    path: blocks.4.hook_resid_post
+    l0: 40.0
+  - id: blocks.5.hook_resid_post
+    path: blocks.5.hook_resid_post
+    l0: 40.0
+  - id: blocks.6.hook_resid_post
+    path: blocks.6.hook_resid_post
+    l0: 40.0
+  - id: blocks.7.hook_resid_post
+    path: blocks.7.hook_resid_post
+    l0: 40.0
+  - id: blocks.8.hook_resid_post
+    path: blocks.8.hook_resid_post
+    l0: 40.0
+  - id: blocks.9.hook_resid_post
+    path: blocks.9.hook_resid_post
+    l0: 40.0
+  - id: blocks.10.hook_resid_post
+    path: blocks.10.hook_resid_post
+    l0: 40.0
+  - id: blocks.11.hook_resid_post
+    path: blocks.11.hook_resid_post
+    l0: 40.0
+  - id: blocks.12.hook_resid_post
+    path: blocks.12.hook_resid_post
+    l0: 40.0
+  - id: blocks.13.hook_resid_post
+    path: blocks.13.hook_resid_post
+    l0: 40.0
+  - id: blocks.14.hook_resid_post
+    path: blocks.14.hook_resid_post
+    l0: 40.0
+  - id: blocks.15.hook_resid_post
+    path: blocks.15.hook_resid_post
+    l0: 40.0
+  - id: blocks.16.hook_resid_post
+    path: blocks.16.hook_resid_post
+    l0: 40.0
+  - id: blocks.17.hook_resid_post
+    path: blocks.17.hook_resid_post
+    l0: 40.0
+  - id: blocks.18.hook_resid_post
+    path: blocks.18.hook_resid_post
+    l0: 40.0
+  - id: blocks.19.hook_resid_post
+    path: blocks.19.hook_resid_post
+    l0: 40.0
+  - id: blocks.20.hook_resid_post
+    path: blocks.20.hook_resid_post
+    l0: 40.0
+  - id: blocks.21.hook_resid_post
+    path: blocks.21.hook_resid_post
+    l0: 40.0
+  - id: blocks.22.hook_resid_post
+    path: blocks.22.hook_resid_post
+    l0: 40.0
+  - id: blocks.23.hook_resid_post
+    path: blocks.23.hook_resid_post
+    l0: 40.0
+  - id: blocks.24.hook_resid_post
+    path: blocks.24.hook_resid_post
+    l0: 40.0
+
+gemma-scope-2b-pt-transcoders:
+  conversion_func: gemma_2_transcoder
+  model: gemma-2-2b
+  repo_id: google/gemma-scope-2b-pt-transcoders
+  saes:
+  - id: layer_0/width_16k/average_l0_76
+    neuronpedia: gemma-2-2b/0-gemmascope-transcoder-16k
+    l0: 76
+    path: layer_0/width_16k/average_l0_76
+  - id: layer_1/width_16k/average_l0_65
+    neuronpedia: gemma-2-2b/1-gemmascope-transcoder-16k
+    l0: 65
+    path: layer_1/width_16k/average_l0_65
+  - id: layer_2/width_16k/average_l0_49
+    neuronpedia: gemma-2-2b/2-gemmascope-transcoder-16k
+    l0: 49
+    path: layer_2/width_16k/average_l0_49
+  - id: layer_3/width_16k/average_l0_54
+    neuronpedia: gemma-2-2b/3-gemmascope-transcoder-16k
+    l0: 54
+    path: layer_3/width_16k/average_l0_54
+  - id: layer_4/width_16k/average_l0_88
+    neuronpedia: gemma-2-2b/4-gemmascope-transcoder-16k
+    l0: 88
+    path: layer_4/width_16k/average_l0_88
+  - id: layer_5/width_16k/average_l0_87
+    neuronpedia: gemma-2-2b/5-gemmascope-transcoder-16k
+    l0: 87
+    path: layer_5/width_16k/average_l0_87
+  - id: layer_6/width_16k/average_l0_95
+    neuronpedia: gemma-2-2b/6-gemmascope-transcoder-16k
+    l0: 95
+    path: layer_6/width_16k/average_l0_95
+  - id: layer_7/width_16k/average_l0_70
+    neuronpedia: gemma-2-2b/7-gemmascope-transcoder-16k
+    l0: 70
+    path: layer_7/width_16k/average_l0_70
+  - id: layer_8/width_16k/average_l0_52
+    neuronpedia: gemma-2-2b/8-gemmascope-transcoder-16k
+    l0: 52
+    path: layer_8/width_16k/average_l0_52
+  - id: layer_9/width_16k/average_l0_72
+    neuronpedia: gemma-2-2b/9-gemmascope-transcoder-16k
+    l0: 72
+    path: layer_9/width_16k/average_l0_72
+  - id: layer_10/width_16k/average_l0_88
+    neuronpedia: gemma-2-2b/10-gemmascope-transcoder-16k
+    l0: 88
+    path: layer_10/width_16k/average_l0_88
+  - id: layer_11/width_16k/average_l0_5
+    neuronpedia: gemma-2-2b/11-gemmascope-transcoder-16k
+    l0: 5
+    path: layer_11/width_16k/average_l0_5
+  - id: layer_12/width_16k/average_l0_6
+    neuronpedia: gemma-2-2b/12-gemmascope-transcoder-16k
+    l0: 6
+    path: layer_12/width_16k/average_l0_6
+  - id: layer_13/width_16k/average_l0_8
+    neuronpedia: gemma-2-2b/13-gemmascope-transcoder-16k
+    l0: 8
+    path: layer_13/width_16k/average_l0_8
+  - id: layer_14/width_16k/average_l0_8
+    neuronpedia: gemma-2-2b/14-gemmascope-transcoder-16k
+    l0: 8
+    path: layer_14/width_16k/average_l0_8
+  - id: layer_15/width_16k/average_l0_8
+    neuronpedia: gemma-2-2b/15-gemmascope-transcoder-16k
+    l0: 8
+    path: layer_15/width_16k/average_l0_8
+  - id: layer_16/width_16k/average_l0_10
+    neuronpedia: gemma-2-2b/16-gemmascope-transcoder-16k
+    l0: 10
+    path: layer_16/width_16k/average_l0_10
+  - id: layer_17/width_16k/average_l0_12
+    neuronpedia: gemma-2-2b/17-gemmascope-transcoder-16k
+    l0: 12
+    path: layer_17/width_16k/average_l0_12
+  - id: layer_18/width_16k/average_l0_13
+    neuronpedia: gemma-2-2b/18-gemmascope-transcoder-16k
+    l0: 13
+    path: layer_18/width_16k/average_l0_13
+  - id: layer_19/width_16k/average_l0_12
+    neuronpedia: gemma-2-2b/19-gemmascope-transcoder-16k
+    l0: 12
+    path: layer_19/width_16k/average_l0_12
+  - id: layer_20/width_16k/average_l0_11
+    neuronpedia: gemma-2-2b/20-gemmascope-transcoder-16k
+    l0: 11
+    path: layer_20/width_16k/average_l0_11
+  - id: layer_21/width_16k/average_l0_13
+    neuronpedia: gemma-2-2b/21-gemmascope-transcoder-16k
+    l0: 13
+    path: layer_21/width_16k/average_l0_13
+  - id: layer_22/width_16k/average_l0_15
+    neuronpedia: gemma-2-2b/22-gemmascope-transcoder-16k
+    l0: 15
+    path: layer_22/width_16k/average_l0_15
+  - id: layer_23/width_16k/average_l0_25
+    neuronpedia: gemma-2-2b/23-gemmascope-transcoder-16k
+    l0: 25
+    path: layer_23/width_16k/average_l0_25
+  - id: layer_24/width_16k/average_l0_37
+    neuronpedia: gemma-2-2b/24-gemmascope-transcoder-16k
+    l0: 37
+    path: layer_24/width_16k/average_l0_37
+  - id: layer_25/width_16k/average_l0_41
+    neuronpedia: gemma-2-2b/25-gemmascope-transcoder-16k
+    l0: 41
+    path: layer_25/width_16k/average_l0_41
+
+
+mwhanna-qwen3-4b-transcoders:
+  conversion_func: mwhanna_transcoder
+  model: qwen3-4b
+  repo_id: mwhanna/qwen3-4b-transcoders
+  saes:
+  - id: layer_0
+    path: layer_0.safetensors
+    neuronpedia: qwen3-4b/0-transcoder-hp
+  - id: layer_1
+    path: layer_1.safetensors
+    neuronpedia: qwen3-4b/1-transcoder-hp
+  - id: layer_2
+    path: layer_2.safetensors
+    neuronpedia: qwen3-4b/2-transcoder-hp
+  - id: layer_3
+    path: layer_3.safetensors
+    neuronpedia: qwen3-4b/3-transcoder-hp
+  - id: layer_4
+    path: layer_4.safetensors
+    neuronpedia: qwen3-4b/4-transcoder-hp
+  - id: layer_5
+    path: layer_5.safetensors
+    neuronpedia: qwen3-4b/5-transcoder-hp
+  - id: layer_6
+    path: layer_6.safetensors
+    neuronpedia: qwen3-4b/6-transcoder-hp
+  - id: layer_7
+    path: layer_7.safetensors
+    neuronpedia: qwen3-4b/7-transcoder-hp
+  - id: layer_8
+    path: layer_8.safetensors
+    neuronpedia: qwen3-4b/8-transcoder-hp
+  - id: layer_9
+    path: layer_9.safetensors
+    neuronpedia: qwen3-4b/9-transcoder-hp
+  - id: layer_10
+    path: layer_10.safetensors
+    neuronpedia: qwen3-4b/10-transcoder-hp
+  - id: layer_11
+    path: layer_11.safetensors
+    neuronpedia: qwen3-4b/11-transcoder-hp
+  - id: layer_12
+    path: layer_12.safetensors
+    neuronpedia: qwen3-4b/12-transcoder-hp
+  - id: layer_13
+    path: layer_13.safetensors
+    neuronpedia: qwen3-4b/13-transcoder-hp
+  - id: layer_14
+    path: layer_14.safetensors
+    neuronpedia: qwen3-4b/14-transcoder-hp
+  - id: layer_15
+    path: layer_15.safetensors
+    neuronpedia: qwen3-4b/15-transcoder-hp
+  - id: layer_16
+    path: layer_16.safetensors
+    neuronpedia: qwen3-4b/16-transcoder-hp
+  - id: layer_17
+    path: layer_17.safetensors
+    neuronpedia: qwen3-4b/17-transcoder-hp
+  - id: layer_18
+    path: layer_18.safetensors
+    neuronpedia: qwen3-4b/18-transcoder-hp
+  - id: layer_19
+    path: layer_19.safetensors
+    neuronpedia: qwen3-4b/19-transcoder-hp
+  - id: layer_20
+    path: layer_20.safetensors
+    neuronpedia: qwen3-4b/20-transcoder-hp
+  - id: layer_21
+    path: layer_21.safetensors
+    neuronpedia: qwen3-4b/21-transcoder-hp
+  - id: layer_22
+    path: layer_22.safetensors
+    neuronpedia: qwen3-4b/22-transcoder-hp
+  - id: layer_23
+    path: layer_23.safetensors
+    neuronpedia: qwen3-4b/23-transcoder-hp
+  - id: layer_24
+    path: layer_24.safetensors
+    neuronpedia: qwen3-4b/24-transcoder-hp
+  - id: layer_25
+    path: layer_25.safetensors
+    neuronpedia: qwen3-4b/25-transcoder-hp
+  - id: layer_26
+    path: layer_26.safetensors
+    neuronpedia: qwen3-4b/26-transcoder-hp
+  - id: layer_27
+    path: layer_27.safetensors
+    neuronpedia: qwen3-4b/27-transcoder-hp
+  - id: layer_28
+    path: layer_28.safetensors
+    neuronpedia: qwen3-4b/28-transcoder-hp
+  - id: layer_29
+    path: layer_29.safetensors
+    neuronpedia: qwen3-4b/29-transcoder-hp
+  - id: layer_30
+    path: layer_30.safetensors
+    neuronpedia: qwen3-4b/30-transcoder-hp
+  - id: layer_31
+    path: layer_31.safetensors
+    neuronpedia: qwen3-4b/31-transcoder-hp
+  - id: layer_32
+    path: layer_32.safetensors
+    neuronpedia: qwen3-4b/32-transcoder-hp
+  - id: layer_33
+    path: layer_33.safetensors
+    neuronpedia: qwen3-4b/33-transcoder-hp
+  - id: layer_34
+    path: layer_34.safetensors
+    neuronpedia: qwen3-4b/34-transcoder-hp
+  - id: layer_35
+    path: layer_35.safetensors
+    neuronpedia: qwen3-4b/35-transcoder-hp
+
+mwhanna-qwen3-8b-transcoders:
+  conversion_func: mwhanna_transcoder
+  model: qwen3-8b
+  repo_id: mwhanna/qwen3-8b-transcoders
+  saes:
+  - id: layer_0
+    path: layer_0.safetensors
+    neuronpedia: qwen3-8b/0-transcoder-hp
+  - id: layer_1
+    path: layer_1.safetensors
+    neuronpedia: qwen3-8b/1-transcoder-hp
+  - id: layer_2
+    path: layer_2.safetensors
+    neuronpedia: qwen3-8b/2-transcoder-hp
+  - id: layer_3
+    path: layer_3.safetensors
+    neuronpedia: qwen3-8b/3-transcoder-hp
+  - id: layer_4
+    path: layer_4.safetensors
+    neuronpedia: qwen3-8b/4-transcoder-hp
+  - id: layer_5
+    path: layer_5.safetensors
+    neuronpedia: qwen3-8b/5-transcoder-hp
+  - id: layer_6
+    path: layer_6.safetensors
+    neuronpedia: qwen3-8b/6-transcoder-hp
+  - id: layer_7
+    path: layer_7.safetensors
+    neuronpedia: qwen3-8b/7-transcoder-hp
+  - id: layer_8
+    path: layer_8.safetensors
+    neuronpedia: qwen3-8b/8-transcoder-hp
+  - id: layer_9
+    path: layer_9.safetensors
+    neuronpedia: qwen3-8b/9-transcoder-hp
+  - id: layer_10
+    path: layer_10.safetensors
+    neuronpedia: qwen3-8b/10-transcoder-hp
+  - id: layer_11
+    path: layer_11.safetensors
+    neuronpedia: qwen3-8b/11-transcoder-hp
+  - id: layer_12
+    path: layer_12.safetensors
+    neuronpedia: qwen3-8b/12-transcoder-hp
+  - id: layer_13
+    path: layer_13.safetensors
+    neuronpedia: qwen3-8b/13-transcoder-hp
+  - id: layer_14
+    path: layer_14.safetensors
+    neuronpedia: qwen3-8b/14-transcoder-hp
+  - id: layer_15
+    path: layer_15.safetensors
+    neuronpedia: qwen3-8b/15-transcoder-hp
+  - id: layer_16
+    path: layer_16.safetensors
+    neuronpedia: qwen3-8b/16-transcoder-hp
+  - id: layer_17
+    path: layer_17.safetensors
+    neuronpedia: qwen3-8b/17-transcoder-hp
+  - id: layer_18
+    path: layer_18.safetensors
+    neuronpedia: qwen3-8b/18-transcoder-hp
+  - id: layer_19
+    path: layer_19.safetensors
+    neuronpedia: qwen3-8b/19-transcoder-hp
+  - id: layer_20
+    path: layer_20.safetensors
+    neuronpedia: qwen3-8b/20-transcoder-hp
+  - id: layer_21
+    path: layer_21.safetensors
+    neuronpedia: qwen3-8b/21-transcoder-hp
+  - id: layer_22
+    path: layer_22.safetensors
+    neuronpedia: qwen3-8b/22-transcoder-hp
+  - id: layer_23
+    path: layer_23.safetensors
+    neuronpedia: qwen3-8b/23-transcoder-hp
+  - id: layer_24
+    path: layer_24.safetensors
+    neuronpedia: qwen3-8b/24-transcoder-hp
+  - id: layer_25
+    path: layer_25.safetensors
+    neuronpedia: qwen3-8b/25-transcoder-hp
+  - id: layer_26
+    path: layer_26.safetensors
+    neuronpedia: qwen3-8b/26-transcoder-hp
+  - id: layer_27
+    path: layer_27.safetensors
+    neuronpedia: qwen3-8b/27-transcoder-hp
+  - id: layer_28
+    path: layer_28.safetensors
+    neuronpedia: qwen3-8b/28-transcoder-hp
+  - id: layer_29
+    path: layer_29.safetensors
+    neuronpedia: qwen3-8b/29-transcoder-hp
+  - id: layer_30
+    path: layer_30.safetensors
+    neuronpedia: qwen3-8b/30-transcoder-hp
+  - id: layer_31
+    path: layer_31.safetensors
+    neuronpedia: qwen3-8b/31-transcoder-hp
+  - id: layer_32
+    path: layer_32.safetensors
+    neuronpedia: qwen3-8b/32-transcoder-hp
+  - id: layer_33
+    path: layer_33.safetensors
+    neuronpedia: qwen3-8b/33-transcoder-hp
+  - id: layer_34
+    path: layer_34.safetensors
+    neuronpedia: qwen3-8b/34-transcoder-hp
+  - id: layer_35
+    path: layer_35.safetensors
+    neuronpedia: qwen3-8b/35-transcoder-hp
+
+mwhanna-qwen3-14b-transcoders:
+  conversion_func: mwhanna_transcoder
+  model: qwen3-14b
+  repo_id: mwhanna/qwen3-14b-transcoders
+  saes:
+  - id: layer_0
+    path: layer_0.safetensors
+    neuronpedia: qwen3-14b/0-transcoder-hp
+  - id: layer_1
+    path: layer_1.safetensors
+    neuronpedia: qwen3-14b/1-transcoder-hp
+  - id: layer_2
+    path: layer_2.safetensors
+    neuronpedia: qwen3-14b/2-transcoder-hp
+  - id: layer_3
+    path: layer_3.safetensors
+    neuronpedia: qwen3-14b/3-transcoder-hp
+  - id: layer_4
+    path: layer_4.safetensors
+    neuronpedia: qwen3-14b/4-transcoder-hp
+  - id: layer_5
+    path: layer_5.safetensors
+    neuronpedia: qwen3-14b/5-transcoder-hp
+  - id: layer_6
+    path: layer_6.safetensors
+    neuronpedia: qwen3-14b/6-transcoder-hp
+  - id: layer_7
+    path: layer_7.safetensors
+    neuronpedia: qwen3-14b/7-transcoder-hp
+  - id: layer_8
+    path: layer_8.safetensors
+    neuronpedia: qwen3-14b/8-transcoder-hp
+  - id: layer_9
+    path: layer_9.safetensors
+    neuronpedia: qwen3-14b/9-transcoder-hp
+  - id: layer_10
+    path: layer_10.safetensors
+    neuronpedia: qwen3-14b/10-transcoder-hp
+  - id: layer_11
+    path: layer_11.safetensors
+    neuronpedia: qwen3-14b/11-transcoder-hp
+  - id: layer_12
+    path: layer_12.safetensors
+    neuronpedia: qwen3-14b/12-transcoder-hp
+  - id: layer_13
+    path: layer_13.safetensors
+    neuronpedia: qwen3-14b/13-transcoder-hp
+  - id: layer_14
+    path: layer_14.safetensors
+    neuronpedia: qwen3-14b/14-transcoder-hp
+  - id: layer_15
+    path: layer_15.safetensors
+    neuronpedia: qwen3-14b/15-transcoder-hp
+  - id: layer_16
+    path: layer_16.safetensors
+    neuronpedia: qwen3-14b/16-transcoder-hp
+  - id: layer_17
+    path: layer_17.safetensors
+    neuronpedia: qwen3-14b/17-transcoder-hp
+  - id: layer_18
+    path: layer_18.safetensors
+    neuronpedia: qwen3-14b/18-transcoder-hp
+  - id: layer_19
+    path: layer_19.safetensors
+    neuronpedia: qwen3-14b/19-transcoder-hp
+  - id: layer_20
+    path: layer_20.safetensors
+    neuronpedia: qwen3-14b/20-transcoder-hp
+  - id: layer_21
+    path: layer_21.safetensors
+    neuronpedia: qwen3-14b/21-transcoder-hp
+  - id: layer_22
+    path: layer_22.safetensors
+    neuronpedia: qwen3-14b/22-transcoder-hp
+  - id: layer_23
+    path: layer_23.safetensors
+    neuronpedia: qwen3-14b/23-transcoder-hp
+  - id: layer_24
+    path: layer_24.safetensors
+    neuronpedia: qwen3-14b/24-transcoder-hp
+  - id: layer_25
+    path: layer_25.safetensors
+    neuronpedia: qwen3-14b/25-transcoder-hp
+  - id: layer_26
+    path: layer_26.safetensors
+    neuronpedia: qwen3-14b/26-transcoder-hp
+  - id: layer_27
+    path: layer_27.safetensors
+    neuronpedia: qwen3-14b/27-transcoder-hp
+  - id: layer_28
+    path: layer_28.safetensors
+    neuronpedia: qwen3-14b/28-transcoder-hp
+  - id: layer_29
+    path: layer_29.safetensors
+    neuronpedia: qwen3-14b/29-transcoder-hp
+  - id: layer_30
+    path: layer_30.safetensors
+    neuronpedia: qwen3-14b/30-transcoder-hp
+  - id: layer_31
+    path: layer_31.safetensors
+    neuronpedia: qwen3-14b/31-transcoder-hp
+  - id: layer_32
+    path: layer_32.safetensors
+    neuronpedia: qwen3-14b/32-transcoder-hp
+  - id: layer_33
+    path: layer_33.safetensors
+    neuronpedia: qwen3-14b/33-transcoder-hp
+  - id: layer_34
+    path: layer_34.safetensors
+    neuronpedia: qwen3-14b/34-transcoder-hp
+  - id: layer_35
+    path: layer_35.safetensors
+    neuronpedia: qwen3-14b/35-transcoder-hp
+  - id: layer_36
+    path: layer_36.safetensors
+    neuronpedia: qwen3-14b/36-transcoder-hp
+  - id: layer_37
+    path: layer_37.safetensors
+    neuronpedia: qwen3-14b/37-transcoder-hp
+  - id: layer_38
+    path: layer_38.safetensors
+    neuronpedia: qwen3-14b/38-transcoder-hp
+  - id: layer_39
+    path: layer_39.safetensors
+    neuronpedia: qwen3-14b/39-transcoder-hp
+
+mwhanna-qwen3-14b-transcoders-lowl0:
+  conversion_func: mwhanna_transcoder
+  model: qwen3-14b
+  repo_id: mwhanna/qwen3-14b-transcoders-lowl0
+  saes:
+  - id: layer_0
+    path: layer_0.safetensors
+    neuronpedia: qwen3-14b/0-transcoder-hp-lowl0
+  - id: layer_1
+    path: layer_1.safetensors
+    neuronpedia: qwen3-14b/1-transcoder-hp-lowl0
+  - id: layer_2
+    path: layer_2.safetensors
+    neuronpedia: qwen3-14b/2-transcoder-hp-lowl0
+  - id: layer_3
+    path: layer_3.safetensors
+    neuronpedia: qwen3-14b/3-transcoder-hp-lowl0
+  - id: layer_4
+    path: layer_4.safetensors
+    neuronpedia: qwen3-14b/4-transcoder-hp-lowl0
+  - id: layer_5
+    path: layer_5.safetensors
+    neuronpedia: qwen3-14b/5-transcoder-hp-lowl0
+  - id: layer_6
+    path: layer_6.safetensors
+    neuronpedia: qwen3-14b/6-transcoder-hp-lowl0
+  - id: layer_7
+    path: layer_7.safetensors
+    neuronpedia: qwen3-14b/7-transcoder-hp-lowl0
+  - id: layer_8
+    path: layer_8.safetensors
+    neuronpedia: qwen3-14b/8-transcoder-hp-lowl0
+  - id: layer_9
+    path: layer_9.safetensors
+    neuronpedia: qwen3-14b/9-transcoder-hp-lowl0
+  - id: layer_10
+    path: layer_10.safetensors
+    neuronpedia: qwen3-14b/10-transcoder-hp-lowl0
+  - id: layer_11
+    path: layer_11.safetensors
+    neuronpedia: qwen3-14b/11-transcoder-hp-lowl0
+  - id: layer_12
+    path: layer_12.safetensors
+    neuronpedia: qwen3-14b/12-transcoder-hp-lowl0
+  - id: layer_13
+    path: layer_13.safetensors
+    neuronpedia: qwen3-14b/13-transcoder-hp-lowl0
+  - id: layer_14
+    path: layer_14.safetensors
+    neuronpedia: qwen3-14b/14-transcoder-hp-lowl0
+  - id: layer_15
+    path: layer_15.safetensors
+    neuronpedia: qwen3-14b/15-transcoder-hp-lowl0
+  - id: layer_16
+    path: layer_16.safetensors
+    neuronpedia: qwen3-14b/16-transcoder-hp-lowl0
+  - id: layer_17
+    path: layer_17.safetensors
+    neuronpedia: qwen3-14b/17-transcoder-hp-lowl0
+  - id: layer_18
+    path: layer_18.safetensors
+    neuronpedia: qwen3-14b/18-transcoder-hp-lowl0
+  - id: layer_19
+    path: layer_19.safetensors
+    neuronpedia: qwen3-14b/19-transcoder-hp-lowl0
+  - id: layer_20
+    path: layer_20.safetensors
+    neuronpedia: qwen3-14b/20-transcoder-hp-lowl0
+  - id: layer_21
+    path: layer_21.safetensors
+    neuronpedia: qwen3-14b/21-transcoder-hp-lowl0
+  - id: layer_22
+    path: layer_22.safetensors
+    neuronpedia: qwen3-14b/22-transcoder-hp-lowl0
+  - id: layer_23
+    path: layer_23.safetensors
+    neuronpedia: qwen3-14b/23-transcoder-hp-lowl0
+  - id: layer_24
+    path: layer_24.safetensors
+    neuronpedia: qwen3-14b/24-transcoder-hp-lowl0
+  - id: layer_25
+    path: layer_25.safetensors
+    neuronpedia: qwen3-14b/25-transcoder-hp-lowl0
+  - id: layer_26
+    path: layer_26.safetensors
+    neuronpedia: qwen3-14b/26-transcoder-hp-lowl0
+  - id: layer_27
+    path: layer_27.safetensors
+    neuronpedia: qwen3-14b/27-transcoder-hp-lowl0
+  - id: layer_28
+    path: layer_28.safetensors
+    neuronpedia: qwen3-14b/28-transcoder-hp-lowl0
+  - id: layer_29
+    path: layer_29.safetensors
+    neuronpedia: qwen3-14b/29-transcoder-hp-lowl0
+  - id: layer_30
+    path: layer_30.safetensors
+    neuronpedia: qwen3-14b/30-transcoder-hp-lowl0
+  - id: layer_31
+    path: layer_31.safetensors
+    neuronpedia: qwen3-14b/31-transcoder-hp-lowl0
+  - id: layer_32
+    path: layer_32.safetensors
+    neuronpedia: qwen3-14b/32-transcoder-hp-lowl0
+  - id: layer_33
+    path: layer_33.safetensors
+    neuronpedia: qwen3-14b/33-transcoder-hp-lowl0
+  - id: layer_34
+    path: layer_34.safetensors
+    neuronpedia: qwen3-14b/34-transcoder-hp-lowl0
+  - id: layer_35
+    path: layer_35.safetensors
+    neuronpedia: qwen3-14b/35-transcoder-hp-lowl0
+  - id: layer_36
+    path: layer_36.safetensors
+    neuronpedia: qwen3-14b/36-transcoder-hp-lowl0
+  - id: layer_37
+    path: layer_37.safetensors
+    neuronpedia: qwen3-14b/37-transcoder-hp-lowl0
+  - id: layer_38
+    path: layer_38.safetensors
+    neuronpedia: qwen3-14b/38-transcoder-hp-lowl0
+  - id: layer_39
+    path: layer_39.safetensors
+    neuronpedia: qwen3-14b/39-transcoder-hp-lowl0
+
+mwhanna-qwen3-1.7b-transcoders-lowl0:
+  conversion_func: mwhanna_transcoder
+  model: qwen3-1.7b
+  repo_id: mwhanna/qwen3-1.7b-transcoders-lowl0
+  saes:
+  - id: layer_0
+    path: layer_0.safetensors
+    neuronpedia: qwen3-1.7b/0-transcoder-hp-lowl0
+  - id: layer_1
+    path: layer_1.safetensors
+    neuronpedia: qwen3-1.7b/1-transcoder-hp-lowl0
+  - id: layer_2
+    path: layer_2.safetensors
+    neuronpedia: qwen3-1.7b/2-transcoder-hp-lowl0
+  - id: layer_3
+    path: layer_3.safetensors
+    neuronpedia: qwen3-1.7b/3-transcoder-hp-lowl0
+  - id: layer_4
+    path: layer_4.safetensors
+    neuronpedia: qwen3-1.7b/4-transcoder-hp-lowl0
+  - id: layer_5
+    path: layer_5.safetensors
+    neuronpedia: qwen3-1.7b/5-transcoder-hp-lowl0
+  - id: layer_6
+    path: layer_6.safetensors
+    neuronpedia: qwen3-1.7b/6-transcoder-hp-lowl0
+  - id: layer_7
+    path: layer_7.safetensors
+    neuronpedia: qwen3-1.7b/7-transcoder-hp-lowl0
+  - id: layer_8
+    path: layer_8.safetensors
+    neuronpedia: qwen3-1.7b/8-transcoder-hp-lowl0
+  - id: layer_9
+    path: layer_9.safetensors
+    neuronpedia: qwen3-1.7b/9-transcoder-hp-lowl0
+  - id: layer_10
+    path: layer_10.safetensors
+    neuronpedia: qwen3-1.7b/10-transcoder-hp-lowl0
+  - id: layer_11
+    path: layer_11.safetensors
+    neuronpedia: qwen3-1.7b/11-transcoder-hp-lowl0
+  - id: layer_12
+    path: layer_12.safetensors
+    neuronpedia: qwen3-1.7b/12-transcoder-hp-lowl0
+  - id: layer_13
+    path: layer_13.safetensors
+    neuronpedia: qwen3-1.7b/13-transcoder-hp-lowl0
+  - id: layer_14
+    path: layer_14.safetensors
+    neuronpedia: qwen3-1.7b/14-transcoder-hp-lowl0
+  - id: layer_15
+    path: layer_15.safetensors
+    neuronpedia: qwen3-1.7b/15-transcoder-hp-lowl0
+  - id: layer_16
+    path: layer_16.safetensors
+    neuronpedia: qwen3-1.7b/16-transcoder-hp-lowl0
+  - id: layer_17
+    path: layer_17.safetensors
+    neuronpedia: qwen3-1.7b/17-transcoder-hp-lowl0
+  - id: layer_18
+    path: layer_18.safetensors
+    neuronpedia: qwen3-1.7b/18-transcoder-hp-lowl0
+  - id: layer_19
+    path: layer_19.safetensors
+    neuronpedia: qwen3-1.7b/19-transcoder-hp-lowl0
+  - id: layer_20
+    path: layer_20.safetensors
+    neuronpedia: qwen3-1.7b/20-transcoder-hp-lowl0
+  - id: layer_21
+    path: layer_21.safetensors
+    neuronpedia: qwen3-1.7b/21-transcoder-hp-lowl0
+  - id: layer_22
+    path: layer_22.safetensors
+    neuronpedia: qwen3-1.7b/22-transcoder-hp-lowl0
+  - id: layer_23
+    path: layer_23.safetensors
+    neuronpedia: qwen3-1.7b/23-transcoder-hp-lowl0
+  - id: layer_24
+    path: layer_24.safetensors
+    neuronpedia: qwen3-1.7b/24-transcoder-hp-lowl0
+  - id: layer_25
+    path: layer_25.safetensors
+    neuronpedia: qwen3-1.7b/25-transcoder-hp-lowl0
+  - id: layer_26
+    path: layer_26.safetensors
+    neuronpedia: qwen3-1.7b/26-transcoder-hp-lowl0
+  - id: layer_27
+    path: layer_27.safetensors
+    neuronpedia: qwen3-1.7b/27-transcoder-hp-lowl0
+
+mwhanna-qwen3-0.6b-transcoders-lowl0:
+  conversion_func: mwhanna_transcoder
+  model: qwen3-0.6b
+  repo_id: mwhanna/qwen3-0.6b-transcoders-lowl0
+  saes:
+  - id: layer_0
+    path: layer_0.safetensors
+    neuronpedia: qwen3-0.6b/0-transcoder-hp-lowl0
+  - id: layer_1
+    path: layer_1.safetensors
+    neuronpedia: qwen3-0.6b/1-transcoder-hp-lowl0
+  - id: layer_2
+    path: layer_2.safetensors
+    neuronpedia: qwen3-0.6b/2-transcoder-hp-lowl0
+  - id: layer_3
+    path: layer_3.safetensors
+    neuronpedia: qwen3-0.6b/3-transcoder-hp-lowl0
+  - id: layer_4
+    path: layer_4.safetensors
+    neuronpedia: qwen3-0.6b/4-transcoder-hp-lowl0
+  - id: layer_5
+    path: layer_5.safetensors
+    neuronpedia: qwen3-0.6b/5-transcoder-hp-lowl0
+  - id: layer_6
+    path: layer_6.safetensors
+    neuronpedia: qwen3-0.6b/6-transcoder-hp-lowl0
+  - id: layer_7
+    path: layer_7.safetensors
+    neuronpedia: qwen3-0.6b/7-transcoder-hp-lowl0
+  - id: layer_8
+    path: layer_8.safetensors
+    neuronpedia: qwen3-0.6b/8-transcoder-hp-lowl0
+  - id: layer_9
+    path: layer_9.safetensors
+    neuronpedia: qwen3-0.6b/9-transcoder-hp-lowl0
+  - id: layer_10
+    path: layer_10.safetensors
+    neuronpedia: qwen3-0.6b/10-transcoder-hp-lowl0
+  - id: layer_11
+    path: layer_11.safetensors
+    neuronpedia: qwen3-0.6b/11-transcoder-hp-lowl0
+  - id: layer_12
+    path: layer_12.safetensors
+    neuronpedia: qwen3-0.6b/12-transcoder-hp-lowl0
+  - id: layer_13
+    path: layer_13.safetensors
+    neuronpedia: qwen3-0.6b/13-transcoder-hp-lowl0
+  - id: layer_14
+    path: layer_14.safetensors
+    neuronpedia: qwen3-0.6b/14-transcoder-hp-lowl0
+  - id: layer_15
+    path: layer_15.safetensors
+    neuronpedia: qwen3-0.6b/15-transcoder-hp-lowl0
+  - id: layer_16
+    path: layer_16.safetensors
+    neuronpedia: qwen3-0.6b/16-transcoder-hp-lowl0
+  - id: layer_17
+    path: layer_17.safetensors
+    neuronpedia: qwen3-0.6b/17-transcoder-hp-lowl0
+  - id: layer_18
+    path: layer_18.safetensors
+    neuronpedia: qwen3-0.6b/18-transcoder-hp-lowl0
+  - id: layer_19
+    path: layer_19.safetensors
+    neuronpedia: qwen3-0.6b/19-transcoder-hp-lowl0
+  - id: layer_20
+    path: layer_20.safetensors
+    neuronpedia: qwen3-0.6b/20-transcoder-hp-lowl0
+  - id: layer_21
+    path: layer_21.safetensors
+    neuronpedia: qwen3-0.6b/21-transcoder-hp-lowl0
+  - id: layer_22
+    path: layer_22.safetensors
+    neuronpedia: qwen3-0.6b/22-transcoder-hp-lowl0
+  - id: layer_23
+    path: layer_23.safetensors
+    neuronpedia: qwen3-0.6b/23-transcoder-hp-lowl0
+  - id: layer_24
+    path: layer_24.safetensors
+    neuronpedia: qwen3-0.6b/24-transcoder-hp-lowl0
+  - id: layer_25
+    path: layer_25.safetensors
+    neuronpedia: qwen3-0.6b/25-transcoder-hp-lowl0
+  - id: layer_26
+    path: layer_26.safetensors
+    neuronpedia: qwen3-0.6b/26-transcoder-hp-lowl0
+  - id: layer_27
+    path: layer_27.safetensors
+    neuronpedia: qwen3-0.6b/27-transcoder-hp-lowl0
+
+mntss-gemma-2-2b-2.5m-clt-as-per-layer:
+  conversion_func: mntss_clt_layer_transcoder
+  model: gemma-2-2b
+  repo_id: mntss/clt-gemma-2-2b-2.5M
+  saes:
+  - id: layer_0
+    path: 0
+    neuronpedia: gemma-2-2b/0-clt-hp
+  - id: layer_1
+    path: 1
+    neuronpedia: gemma-2-2b/1-clt-hp
+  - id: layer_2
+    path: 2
+    neuronpedia: gemma-2-2b/2-clt-hp
+  - id: layer_3
+    path: 3
+    neuronpedia: gemma-2-2b/3-clt-hp
+  - id: layer_4
+    path: 4
+    neuronpedia: gemma-2-2b/4-clt-hp
+  - id: layer_5
+    path: 5
+    neuronpedia: gemma-2-2b/5-clt-hp
+  - id: layer_6
+    path: 6
+    neuronpedia: gemma-2-2b/6-clt-hp
+  - id: layer_7
+    path: 7
+    neuronpedia: gemma-2-2b/7-clt-hp
+  - id: layer_8
+    path: 8
+    neuronpedia: gemma-2-2b/8-clt-hp
+  - id: layer_9
+    path: 9
+    neuronpedia: gemma-2-2b/9-clt-hp
+  - id: layer_10
+    path: 10
+    neuronpedia: gemma-2-2b/10-clt-hp
+  - id: layer_11
+    path: 11
+    neuronpedia: gemma-2-2b/11-clt-hp
+  - id: layer_12
+    path: 12
+    neuronpedia: gemma-2-2b/12-clt-hp
+  - id: layer_13
+    path: 13
+    neuronpedia: gemma-2-2b/13-clt-hp
+  - id: layer_14
+    path: 14
+    neuronpedia: gemma-2-2b/14-clt-hp
+  - id: layer_15
+    path: 15
+    neuronpedia: gemma-2-2b/15-clt-hp
+  - id: layer_16
+    path: 16
+    neuronpedia: gemma-2-2b/16-clt-hp
+  - id: layer_17
+    path: 17
+    neuronpedia: gemma-2-2b/17-clt-hp
+  - id: layer_18
+    path: 18
+    neuronpedia: gemma-2-2b/18-clt-hp
+  - id: layer_19
+    path: 19
+    neuronpedia: gemma-2-2b/19-clt-hp
+  - id: layer_20
+    path: 20
+    neuronpedia: gemma-2-2b/20-clt-hp
+  - id: layer_21
+    path: 21
+    neuronpedia: gemma-2-2b/21-clt-hp
+  - id: layer_22
+    path: 22
+    neuronpedia: gemma-2-2b/22-clt-hp
+  - id: layer_23
+    path: 23
+    neuronpedia: gemma-2-2b/23-clt-hp
+  - id: layer_24
+    path: 24
+    neuronpedia: gemma-2-2b/24-clt-hp
+  - id: layer_25
+    path: 25
+    neuronpedia: gemma-2-2b/25-clt-hp
+
+llama-3.1-8b-instruct-andyrdt:
+  conversion_func: dictionary_learning_1
+  model: meta-llama/Llama-3.1-8B-Instruct
+  repo_id: andyrdt/saes-llama-3.1-8b-instruct
+  saes:
+  - id: resid_post_layer_3_trainer_1
+    path: resid_post_layer_3/trainer_1
+    neuronpedia: llama3.1-8b-it/3-resid-post-aa
+  - id: resid_post_layer_7_trainer_1
+    path: resid_post_layer_7/trainer_1
+    neuronpedia: llama3.1-8b-it/7-resid-post-aa
+  - id: resid_post_layer_11_trainer_1
+    path: resid_post_layer_11/trainer_1
+    neuronpedia: llama3.1-8b-it/11-resid-post-aa
+  - id: resid_post_layer_15_trainer_1
+    path: resid_post_layer_15/trainer_1
+    neuronpedia: llama3.1-8b-it/15-resid-post-aa
+  - id: resid_post_layer_19_trainer_1
+    path: resid_post_layer_19/trainer_1
+    neuronpedia: llama3.1-8b-it/19-resid-post-aa
+  - id: resid_post_layer_23_trainer_1
+    path: resid_post_layer_23/trainer_1
+    neuronpedia: llama3.1-8b-it/23-resid-post-aa
+  - id: resid_post_layer_27_trainer_1
+    path: resid_post_layer_27/trainer_1
+    neuronpedia: llama3.1-8b-it/27-resid-post-aa
+
+qwen2.5-7b-instruct-andyrdt:
+  conversion_func: dictionary_learning_1
+  model: Qwen/Qwen2.5-7B-Instruct
+  repo_id: andyrdt/saes-qwen2.5-7b-instruct
+  saes:
+  - id: resid_post_layer_3_trainer_1
+    path: resid_post_layer_3/trainer_1
+    neuronpedia: qwen2.5-7b-it/3-resid-post-aa
+  - id: resid_post_layer_7_trainer_1
+    path: resid_post_layer_7/trainer_1
+    neuronpedia: qwen2.5-7b-it/7-resid-post-aa
+  - id: resid_post_layer_11_trainer_1
+    path: resid_post_layer_11/trainer_1
+    neuronpedia: qwen2.5-7b-it/11-resid-post-aa
+  - id: resid_post_layer_15_trainer_1
+    path: resid_post_layer_15/trainer_1
+    neuronpedia: qwen2.5-7b-it/15-resid-post-aa
+  - id: resid_post_layer_19_trainer_1
+    path: resid_post_layer_19/trainer_1
+    neuronpedia: qwen2.5-7b-it/19-resid-post-aa
+  - id: resid_post_layer_23_trainer_1
+    path: resid_post_layer_23/trainer_1
+    neuronpedia: qwen2.5-7b-it/23-resid-post-aa
+  - id: resid_post_layer_27_trainer_1
+    path: resid_post_layer_27/trainer_1
+    neuronpedia: qwen2.5-7b-it/27-resid-post-aa
+
+gpt-oss-20b-andyrdt:
+  conversion_func: dictionary_learning_1
+  model: openai/gpt-oss-20b
+  repo_id: andyrdt/saes-gpt-oss-20b
+  saes:
+  - id: resid_post_layer_3_trainer_0
+    path: resid_post_layer_3/trainer_0
+    neuronpedia: gpt-oss-20b/3-resid-post-aa
+  - id: resid_post_layer_7_trainer_0
+    path: resid_post_layer_7/trainer_0
+    neuronpedia: gpt-oss-20b/7-resid-post-aa
+  - id: resid_post_layer_11_trainer_0
+    path: resid_post_layer_11/trainer_0
+    neuronpedia: gpt-oss-20b/11-resid-post-aa
+  - id: resid_post_layer_15_trainer_0
+    path: resid_post_layer_15/trainer_0
+    neuronpedia: gpt-oss-20b/15-resid-post-aa
+  - id: resid_post_layer_19_trainer_0
+    path: resid_post_layer_19/trainer_0
+    neuronpedia: gpt-oss-20b/19-resid-post-aa
+  - id: resid_post_layer_23_trainer_0
+    path: resid_post_layer_23/trainer_0
+    neuronpedia: gpt-oss-20b/23-resid-post-aa
+
+goodfire-llama-3.3-70b-instruct:
+  conversion_func: goodfire
+  model: meta-llama/Llama-3.3-70B-Instruct
+  repo_id: Goodfire/Llama-3.3-70B-Instruct-SAE-l50
+  saes:
+  - id: layer_50
+    path: Llama-3.3-70B-Instruct-SAE-l50.pt
+    l0: 121
+
+goodfire-llama-3.1-8b-instruct:
+  conversion_func: goodfire
+  model: meta-llama/Llama-3.1-8B-Instruct
+  repo_id: Goodfire/Llama-3.1-8B-Instruct-SAE-l19
+  saes:
+  - id: layer_19
+    path: Llama-3.1-8B-Instruct-SAE-l19.pth
+    l0: 91

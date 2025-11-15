@@ -1,4 +1,4 @@
-from typing import Generator, Iterator
+from collections.abc import Generator, Iterator
 
 import torch
 
@@ -64,10 +64,11 @@ def concat_and_batch_sequences(
     begin_batch_token_id: int | None = None,
     begin_sequence_token_id: int | None = None,
     sequence_separator_token_id: int | None = None,
+    disable_concat_sequences: bool = False,
 ) -> Generator[torch.Tensor, None, None]:
     """
     Generator to concat token sequences together from the tokens_interator, yielding
-    batches of size `context_size`.
+    sequences of size `context_size`. Batching across the batch dimension is handled by the caller.
 
     Args:
         tokens_iterator: An iterator which returns a 1D tensors of tokens
@@ -75,8 +76,30 @@ def concat_and_batch_sequences(
         begin_batch_token_id: If provided, this token will be at position 0 of each batch
         begin_sequence_token_id: If provided, this token will be the first token of each sequence
         sequence_separator_token_id: If provided, this token will be inserted between concatenated sequences
+        disable_concat_sequences: If True, disable concatenating sequences and ignore sequences shorter than context_size (including BOS token if present)
         max_batches: If not provided, the iterator will be run to completion.
     """
+    if disable_concat_sequences:
+        if begin_batch_token_id and not begin_sequence_token_id:
+            begin_sequence_token_id = begin_batch_token_id
+        for sequence in tokens_iterator:
+            if (
+                begin_sequence_token_id is not None
+                and sequence[0] != begin_sequence_token_id
+                and len(sequence) >= context_size - 1
+            ):
+                begin_sequence_token_id_tensor = torch.tensor(
+                    [begin_sequence_token_id],
+                    dtype=torch.long,
+                    device=sequence.device,
+                )
+                sequence = torch.cat(
+                    [begin_sequence_token_id_tensor, sequence[: context_size - 1]]
+                )
+            if len(sequence) >= context_size:
+                yield sequence[:context_size]
+        return
+
     batch: torch.Tensor | None = None
     for tokens in tokens_iterator:
         if len(tokens.shape) != 1:
